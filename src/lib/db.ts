@@ -1,36 +1,8 @@
-import Database from 'better-sqlite3';
+import fs from 'fs';
 import path from 'path';
 
-const DB_PATH = path.join(process.cwd(), 'data', 'briefforge.db');
-
-let db: Database.Database | null = null;
-
-export function getDb(): Database.Database {
-  if (!db) {
-    db = new Database(DB_PATH);
-
-    // Enable WAL mode for better concurrent access (though single user, good practice)
-    db.pragma('journal_mode = WAL');
-
-    // Create tables if they don't exist
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS projects (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_name TEXT NOT NULL,
-        business_type TEXT NOT NULL,
-        visual_style TEXT NOT NULL,
-        project_goal TEXT NOT NULL,
-        language TEXT NOT NULL,
-        complexity TEXT NOT NULL,
-        briefing JSON NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-  }
-
-  return db;
-}
+const DATA_DIR = path.join(process.cwd(), 'data');
+const DB_PATH = path.join(DATA_DIR, 'db.json');
 
 export interface ProjectRow {
   id: number;
@@ -95,4 +67,84 @@ export interface BriefingData {
     social_media_prompt: string;
     lovable_or_cursor_prompt: string;
   };
+}
+
+interface DbData {
+  nextId: number;
+  projects: ProjectRow[];
+}
+
+function ensureDataDir(): void {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+}
+
+function readDb(): DbData {
+  ensureDataDir();
+  try {
+    const raw = fs.readFileSync(DB_PATH, 'utf-8');
+    return JSON.parse(raw);
+  } catch {
+    return { nextId: 1, projects: [] };
+  }
+}
+
+function writeDb(data: DbData): void {
+  ensureDataDir();
+  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
+}
+
+export function getAllProjects(): ProjectRow[] {
+  const db = readDb();
+  return db.projects.sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+}
+
+export function getProjectPreviews(): Array<{
+  id: number;
+  client_name: string;
+  business_type: string;
+  visual_style: string;
+  created_at: string;
+}> {
+  const db = readDb();
+  return db.projects
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .map(({ id, client_name, business_type, visual_style, created_at }) => ({
+      id,
+      client_name,
+      business_type,
+      visual_style,
+      created_at,
+    }));
+}
+
+export function getProjectById(id: number): ProjectRow | undefined {
+  const db = readDb();
+  return db.projects.find((p) => p.id === id);
+}
+
+export function createProject(data: {
+  client_name: string;
+  business_type: string;
+  visual_style: string;
+  project_goal: string;
+  language: string;
+  complexity: string;
+  briefing: string;
+}): ProjectRow {
+  const db = readDb();
+  const now = new Date().toISOString();
+  const project: ProjectRow = {
+    id: db.nextId,
+    ...data,
+    created_at: now,
+    updated_at: now,
+  };
+  db.nextId++;
+  db.projects.push(project);
+  writeDb(db);
+  return project;
 }

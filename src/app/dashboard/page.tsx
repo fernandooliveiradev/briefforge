@@ -1,18 +1,10 @@
-import { getDb, ProjectRow } from "@/lib/db";
+import { getProjectPreviews } from "@/lib/db";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PenLine, Calendar, Palette, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = 'force-dynamic';
-
-interface ProjectPreview {
-  id: number;
-  client_name: string;
-  business_type: string;
-  visual_style: string;
-  created_at: string;
-}
 
 function BusinessIcon({ type }: { type: string }) {
   const icons: Record<string, string> = {
@@ -30,8 +22,7 @@ function BusinessIcon({ type }: { type: string }) {
 }
 
 export default async function DashboardPage() {
-  const db = getDb();
-  const rows = db.prepare('SELECT id, client_name, business_type, visual_style, created_at FROM projects ORDER BY created_at DESC').all() as ProjectPreview[];
+  const rows = getProjectPreviews();
 
   return (
     <div className="space-y-8">

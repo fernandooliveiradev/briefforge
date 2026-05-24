@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb, ProjectRow } from '@/lib/db';
+import { getAllProjects, createProject, ProjectRow } from '@/lib/db';
 import { generateBriefing } from '@/lib/generate-briefing';
 
 export async function GET() {
-  const db = getDb();
-  const rows = db.prepare('SELECT * FROM projects ORDER BY created_at DESC').all() as ProjectRow[];
-  const projects = rows.map(row => ({
+  const projects = getAllProjects().map((row) => ({
     ...row,
     briefing: JSON.parse(row.briefing),
   }));
@@ -28,25 +26,21 @@ export async function POST(request: NextRequest) {
     complexity,
   });
 
-  const db = getDb();
-  const stmt = db.prepare(
-    `INSERT INTO projects (client_name, business_type, visual_style, project_goal, language, complexity, briefing)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  );
-
-  const result = stmt.run(
-    briefingData.client.name,
+  const newProject = createProject({
+    client_name: briefingData.client.name,
     business_type,
     visual_style,
     project_goal,
     language,
     complexity,
-    JSON.stringify(briefingData)
-  );
+    briefing: JSON.stringify(briefingData),
+  });
 
-  const newProject = db.prepare('SELECT * FROM projects WHERE id = ?').get(result.lastInsertRowid) as ProjectRow;
-  return NextResponse.json({
-    ...newProject,
-    briefing: JSON.parse(newProject.briefing),
-  }, { status: 201 });
+  return NextResponse.json(
+    {
+      ...newProject,
+      briefing: JSON.parse(newProject.briefing),
+    },
+    { status: 201 }
+  );
 }

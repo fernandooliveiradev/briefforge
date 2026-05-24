@@ -1,4 +1,4 @@
-import { getDb, ProjectRow } from "@/lib/db";
+import { getProjectById, ProjectRow } from "@/lib/db";
 import BriefingViewer from "@/components/briefing-viewer";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -13,8 +13,7 @@ export default async function ProjectDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const db = getDb();
-  const row = db.prepare('SELECT * FROM projects WHERE id = ?').get(parseInt(id)) as ProjectRow | undefined;
+  const row = getProjectById(parseInt(id));
 
   if (!row) {
     notFound();
