@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/navbar";
-import { Toaster } from "@/components/ui/sonner";
+import { ClientToaster } from "@/components/client-toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({
@@ -41,7 +41,7 @@ export default function RootLayout({
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             {children}
           </main>
-          <Toaster />
+          <ClientToaster />
         </ThemeProvider>
       </body>
     </html>
