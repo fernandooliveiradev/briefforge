@@ -7,7 +7,7 @@ const namesBySegment: Record<string, string[]> = {
   loja_virtual: ['Essência Store', 'Mono Goods', 'Studio Flora', 'Atlas Moda'],
   marca_pessoal: ['Lucas Cavalcanti', 'Maria Conselheira', 'Pedro Nômade', 'Ana Criativa'],
   advocacia: ['Luna Advocacia', 'Gomes & Portela', 'LexPartners', 'FGV Direito'],
-  imobiliaria: ['Terra & Forma', 'Habitar’, ‘Nexo Imóveis', 'Verte Residencial'],
+  imobiliaria: ['Terra & Forma', 'Habitar', 'Nexo Imóveis', 'Verte Residencial'],
   academia: ['ActionFit', 'Movimento Essencial', 'Box 42', 'Studio Flow'],
   estudio_criativo: ['Oficina Gráfica', 'Estúdio Calma', 'Cor & Lente', 'Luppa Design']
 };
