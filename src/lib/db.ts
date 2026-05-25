@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { encrypt, decrypt } from './crypto-utils';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DATA_DIR, 'db.json');
@@ -83,7 +84,8 @@ function ensureDataDir(): void {
 function readDb(): DbData {
   ensureDataDir();
   try {
-    const raw = fs.readFileSync(DB_PATH, 'utf-8');
+    const encrypted = fs.readFileSync(DB_PATH, 'utf-8');
+    const raw = decrypt(encrypted);
     return JSON.parse(raw);
   } catch {
     return { nextId: 1, projects: [] };
@@ -92,7 +94,9 @@ function readDb(): DbData {
 
 function writeDb(data: DbData): void {
   ensureDataDir();
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  const raw = JSON.stringify(data, null, 2);
+  const encrypted = encrypt(raw);
+  fs.writeFileSync(DB_PATH, encrypted, 'utf-8');
 }
 
 export function getAllProjects(): ProjectRow[] {
