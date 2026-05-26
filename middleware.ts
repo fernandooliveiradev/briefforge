@@ -28,7 +28,10 @@ export async function middleware(request: NextRequest) {
   }
 
   if (request.nextUrl.pathname.startsWith('/api/')) {
-    return NextResponse.json({ error: 'Acesso não autorizado.' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Acesso não autorizado.', code: 'unauthorized' },
+      { status: 401 }
+    );
   }
 
   const loginUrl = new URL('/login', request.url);

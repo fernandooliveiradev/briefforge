@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { apiError, invalidRequestResponse, notFoundResponse } from '@/lib/api-response';
 import {
   getProjectById,
   isProjectDatabaseError,
@@ -15,6 +16,7 @@ import {
 } from '@/lib/generate-briefing-ai';
 import { parseProjectId } from '@/lib/project-id';
 import { requireApiAccess } from '@/lib/server-access';
+import { limitAiGeneration, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 
 const stages = new Set<RegenerationStage>([
   'briefing',
@@ -94,33 +96,37 @@ export async function POST(
   const unauthorized = await requireApiAccess();
   if (unauthorized) return unauthorized;
 
+  const limit = limitAiGeneration(request);
+  if (!limit.ok) return rateLimitResponse(limit);
+
   const { id } = await params;
   const projectId = parseProjectId(id);
 
   if (!projectId) {
-    return NextResponse.json({ error: 'Project id invalid' }, { status: 400 });
+    return invalidRequestResponse('Project id invalid');
   }
 
   const body = await request.json().catch(() => null);
   const stage = body?.stage as RegenerationStage | undefined;
 
   if (!stage || !stages.has(stage)) {
-    return NextResponse.json({ error: 'Etapa inválida.' }, { status: 400 });
+    return invalidRequestResponse('Etapa inválida.');
   }
 
   try {
     const row = getProjectById(projectId);
 
     if (!row) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return notFoundResponse('Project not found');
     }
 
     const provider = providerFromAiModel(row.ai_model);
 
     if (!hasAiKey(provider)) {
-      return NextResponse.json(
-        { error: 'Geração indisponível no momento. A etapa não foi alterada.' },
-        { status: 503 }
+      return apiError(
+        'Geração indisponível no momento. A etapa não foi alterada.',
+        503,
+        'missing_ai_provider_key'
       );
     }
 
@@ -138,18 +144,19 @@ export async function POST(
     const updated = updateProjectBriefing(projectId, JSON.stringify(merged), getActiveAiModelLabel(provider));
 
     if (!updated) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return notFoundResponse('Project not found');
     }
 
-    return NextResponse.json({
+    return withRateLimitHeaders(NextResponse.json({
       ...updated,
       briefing: JSON.parse(updated.briefing),
-    });
+    }), limit);
   } catch (error) {
     console.error('Erro ao regenerar etapa:', error);
-    return NextResponse.json(
-      { error: getAiGenerationPublicMessage(error) },
-      { status: isProjectDatabaseError(error) ? 503 : 502 }
+    return apiError(
+      getAiGenerationPublicMessage(error),
+      isProjectDatabaseError(error) ? 503 : 502,
+      isProjectDatabaseError(error) ? 'project_database_failed' : 'ai_generation_failed'
     );
   }
 }

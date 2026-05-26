@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { invalidRequestResponse, apiError } from '@/lib/api-response';
 import {
   getAllProjects,
   createProject,
@@ -13,22 +14,39 @@ import {
 } from '@/lib/generate-briefing-ai';
 import { projectRequestSchema } from '@/lib/project-options';
 import { requireApiAccess } from '@/lib/server-access';
+import {
+  limitAiGeneration,
+  limitProjectRead,
+  rateLimitResponse,
+  withRateLimitHeaders,
+} from '@/lib/rate-limit';
 
-export async function GET() {
+const MAX_PROJECT_PAYLOAD_BYTES = 16 * 1024;
+
+function isPayloadTooLarge(request: NextRequest): boolean {
+  const contentLength = Number(request.headers.get('content-length') || 0);
+  return Number.isFinite(contentLength) && contentLength > MAX_PROJECT_PAYLOAD_BYTES;
+}
+
+export async function GET(request: NextRequest) {
   const unauthorized = await requireApiAccess();
   if (unauthorized) return unauthorized;
+
+  const limit = limitProjectRead(request);
+  if (!limit.ok) return rateLimitResponse(limit);
 
   try {
     const projects = getAllProjects().map((row) => ({
       ...row,
       briefing: JSON.parse(row.briefing),
     }));
-    return NextResponse.json(projects);
+    return withRateLimitHeaders(NextResponse.json(projects), limit);
   } catch (error) {
     console.error('Erro ao carregar projetos:', error);
-    return NextResponse.json(
-      { error: 'Não foi possível carregar os projetos.' },
-      { status: isProjectDatabaseError(error) ? 503 : 500 }
+    return apiError(
+      'Não foi possível carregar os projetos.',
+      isProjectDatabaseError(error) ? 503 : 500,
+      'project_load_failed'
     );
   }
 }
@@ -37,11 +55,18 @@ export async function POST(request: NextRequest) {
   const unauthorized = await requireApiAccess();
   if (unauthorized) return unauthorized;
 
+  const limit = limitAiGeneration(request);
+  if (!limit.ok) return rateLimitResponse(limit);
+
+  if (isPayloadTooLarge(request)) {
+    return apiError('Payload muito grande.', 413, 'payload_too_large');
+  }
+
   const body = await request.json().catch(() => null);
   const parsedBody = projectRequestSchema.safeParse(body);
 
   if (!parsedBody.success) {
-    return NextResponse.json({ error: 'Parâmetros inválidos.' }, { status: 400 });
+    return invalidRequestResponse();
   }
 
   const { business_type, visual_style, project_goal, language, complexity, ai_provider } = parsedBody.data;
@@ -49,9 +74,10 @@ export async function POST(request: NextRequest) {
   const aiModel = getActiveAiModelLabel(ai_provider);
 
   if (!hasAiKey(ai_provider)) {
-    return NextResponse.json(
-      { error: 'Geração indisponível no momento. O briefing não foi criado.' },
-      { status: 503 }
+    return apiError(
+      'Geração indisponível no momento. O briefing não foi criado.',
+      503,
+      'missing_ai_provider_key'
     );
   }
 
@@ -67,12 +93,7 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error('Erro na geração por IA:', error);
 
-    return NextResponse.json(
-      {
-        error: getAiGenerationPublicMessage(error),
-      },
-      { status: 502 }
-    );
+    return apiError(getAiGenerationPublicMessage(error), 502, 'ai_generation_failed');
   }
 
   let newProject: Awaited<ReturnType<typeof createProject>>;
@@ -89,13 +110,14 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Erro ao salvar projeto:', error);
-    return NextResponse.json(
-      { error: 'Não foi possível salvar o briefing gerado.' },
-      { status: isProjectDatabaseError(error) ? 503 : 500 }
+    return apiError(
+      'Não foi possível salvar o briefing gerado.',
+      isProjectDatabaseError(error) ? 503 : 500,
+      'project_save_failed'
     );
   }
 
-  return NextResponse.json(
+  return withRateLimitHeaders(NextResponse.json(
     {
       ...newProject,
       briefing: JSON.parse(newProject.briefing),
@@ -103,5 +125,5 @@ export async function POST(request: NextRequest) {
       ai_model: aiModel,
     },
     { status: 201 }
-  );
+  ), limit);
 }

@@ -7,6 +7,7 @@ import {
   isSafeRedirectPath,
   isValidAccessToken,
 } from '@/lib/access-control';
+import { unauthorizedResponse } from '@/lib/api-response';
 
 async function hasAccessCookie(): Promise<boolean> {
   if (!isAccessControlEnabled()) {
@@ -31,5 +32,5 @@ export async function requireApiAccess(): Promise<NextResponse | null> {
     return null;
   }
 
-  return NextResponse.json({ error: 'Acesso não autorizado.' }, { status: 401 });
+  return unauthorizedResponse();
 }

@@ -1,4 +1,11 @@
+![BriefForge banner](docs/assets/github-banner.png)
+
 # BriefForge
+
+[![CI](https://github.com/fernandooliveiradev/briefforge/actions/workflows/ci.yml/badge.svg)](https://github.com/fernandooliveiradev/briefforge/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-24%2B-43853d)](package.json)
 
 BriefForge generates fictional client briefings for portfolio projects. It creates a complete project package with briefing, brand direction, moodboard notes, execution prompts, deliverables, and stage-specific agent skills.
 
@@ -9,6 +16,10 @@ Created and maintained by [Fernando de Oliveira](https://fernandodeoliveira.pro)
 ## Status
 
 BriefForge is early-stage open source software. The current focus is a stable local-first workflow for generating and managing fictional client briefings.
+
+## Preview
+
+BriefForge is designed as a private creative operations tool: generate a fictional client, refine the briefing by stage, export the package, and share read-only links when needed.
 
 ## Features
 
@@ -126,8 +137,30 @@ scripts/                 Local Next.js runner helpers
 - Do not commit `.env`, `data/`, logs, or generated build folders.
 - API keys must stay server-side.
 - Set `BRIEFFORGE_ACCESS_PASSWORD` before exposing the app outside your own machine. Public share links remain available in read-only mode.
-- The local SQLite database is intended for local development and single-instance use.
+- Access sessions are signed, expiring cookies. Project APIs and AI generation endpoints include in-memory rate limits.
+- Security headers are configured globally, including CSP, frame protection, referrer policy, permissions policy, and content-type hardening.
+- The local SQLite database is intended for local development and single-instance use. For multi-instance deployments, plan a migration to Postgres plus Redis/Upstash-backed rate limiting.
 - Report vulnerabilities privately. See `SECURITY.md`.
+
+## Production Readiness
+
+BriefForge is local-first, but the repository is structured so it can be hardened for production:
+
+- `pnpm check` runs TypeScript checks and a production build.
+- CI runs install, typecheck, and build on pushes and pull requests.
+- Authentication is optional locally and recommended for any deployed instance.
+- Rate limiting currently uses an in-memory store and a small abstraction in `src/lib/rate-limit.ts`, ready to be replaced by Redis/Upstash.
+- SQLite uses WAL mode, transactions, schema versioning, foreign keys, and indexed project queries.
+
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for recommended deployment settings and scale-up paths.
+
+## Roadmap
+
+- Redis/Upstash rate limit adapter for multi-instance deployments.
+- Postgres storage adapter for hosted production use.
+- Background jobs for long AI generations and retryable regeneration.
+- Optional user accounts and per-user project ownership.
+- Automated UI tests for the core create/share/export flows.
 
 ## Contributing
 

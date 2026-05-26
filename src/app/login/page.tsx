@@ -14,6 +14,7 @@ export default async function LoginPage({
   const nextParam = typeof params.next === "string" ? params.next : null;
   const nextPath = isSafeRedirectPath(nextParam) ? nextParam : "/dashboard";
   const hasError = params.error === "1";
+  const isLimited = params.error === "rate_limited";
 
   if (!isAccessControlEnabled()) {
     redirect(nextPath);
@@ -39,6 +40,11 @@ export default async function LoginPage({
               />
               {hasError && (
                 <p className="text-sm text-red-600">Senha inválida.</p>
+              )}
+              {isLimited && (
+                <p className="text-sm text-red-600">
+                  Muitas tentativas. Aguarde um pouco antes de tentar novamente.
+                </p>
               )}
             </div>
             <AppButton type="submit" className="w-full">

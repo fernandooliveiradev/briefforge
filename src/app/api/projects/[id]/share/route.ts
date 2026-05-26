@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import { apiError, invalidRequestResponse, notFoundResponse } from '@/lib/api-response';
 import { isProjectDatabaseError, setProjectPublic } from '@/lib/db';
 import { parseProjectId } from '@/lib/project-id';
 import { requireApiAccess } from '@/lib/server-access';
+import { limitProjectMutation, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
 
 export async function POST(
   request: Request,
@@ -10,11 +12,14 @@ export async function POST(
   const unauthorized = await requireApiAccess();
   if (unauthorized) return unauthorized;
 
+  const limit = limitProjectMutation(request);
+  if (!limit.ok) return rateLimitResponse(limit);
+
   const { id } = await params;
   const projectId = parseProjectId(id);
 
   if (!projectId) {
-    return NextResponse.json({ error: 'Project id invalid' }, { status: 400 });
+    return invalidRequestResponse('Project id invalid');
   }
 
   const body = await request.json().catch(() => null);
@@ -24,19 +29,20 @@ export async function POST(
     const updated = setProjectPublic(projectId, isPublic);
 
     if (!updated) {
-      return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      return notFoundResponse('Project not found');
     }
 
-    return NextResponse.json({
+    return withRateLimitHeaders(NextResponse.json({
       id: updated.id,
       share_id: updated.share_id,
       is_public: updated.is_public === 1,
-    });
+    }), limit);
   } catch (error) {
     console.error('Erro ao atualizar compartilhamento:', error);
-    return NextResponse.json(
-      { error: 'Não foi possível atualizar o link público.' },
-      { status: isProjectDatabaseError(error) ? 503 : 500 }
+    return apiError(
+      'Não foi possível atualizar o link público.',
+      isProjectDatabaseError(error) ? 503 : 500,
+      'share_update_failed'
     );
   }
 }
