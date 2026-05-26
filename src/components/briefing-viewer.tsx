@@ -1,18 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { AgentSkill, BriefingData } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, PaintBucket, Type, Camera, Layers, Lightbulb, Sparkles } from "lucide-react";
+import { Copy, Check, PaintBucket, Type, Camera, Layers, Lightbulb, Sparkles, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 interface BriefingViewerProps {
   briefing: BriefingData;
   client_name: string;
   business_type: string;
+  projectId?: number;
+  readOnly?: boolean;
 }
 
 const CopyButton = ({ text, label }: { text: string; label?: string }) => {
@@ -35,9 +38,44 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
   );
 };
 
-export default function BriefingViewer({ briefing, client_name, business_type }: BriefingViewerProps) {
+type StageKey = "briefing" | "brand" | "moodboard" | "prompts" | "deliverables";
+
+export default function BriefingViewer({
+  briefing,
+  client_name,
+  business_type,
+  projectId,
+  readOnly = false,
+}: BriefingViewerProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("briefing");
+  const [regeneratingStage, setRegeneratingStage] = useState<StageKey | null>(null);
   const { agent_skills: skills, prompts } = briefing;
+
+  const regenerateStage = async (stage: StageKey) => {
+    if (!projectId || regeneratingStage) return;
+
+    setRegeneratingStage(stage);
+    try {
+      const response = await fetch(`/api/projects/${projectId}/regenerate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage }),
+      });
+      const body = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(body?.error || "Não foi possível regenerar esta etapa.");
+      }
+
+      toast.success("Etapa regenerada.");
+      router.refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível regenerar esta etapa.");
+    } finally {
+      setRegeneratingStage(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -93,6 +131,12 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
         <TabsContent value="briefing" className="mt-0">
           <Card className="rounded-2xl border border-[hsl(38,25%,88%)] bg-white shadow-sm">
             <CardContent className="p-6 space-y-6">
+              <StageAction
+                stage="briefing"
+                readOnly={readOnly}
+                isLoading={regeneratingStage === "briefing"}
+                onRegenerate={regenerateStage}
+              />
               <Section title="Cliente" icon={<Layers className="h-5 w-5" />}>
                 <InfoRow label="Nome" value={briefing.client.name} />
                 <InfoRow label="Segmento" value={briefing.client.segment} />
@@ -130,6 +174,12 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="rounded-2xl border border-[hsl(38,25%,88%)] bg-white shadow-sm">
               <CardContent className="p-6 space-y-4">
+                <StageAction
+                  stage="brand"
+                  readOnly={readOnly}
+                  isLoading={regeneratingStage === "brand"}
+                  onRegenerate={regenerateStage}
+                />
                 <Section title="Personalidade e tom" icon={<Sparkles className="h-5 w-5" />}>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {briefing.brand.personality.map((p, i) => (
@@ -149,6 +199,7 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
               <CardContent className="p-6 space-y-4">
                 <Section title="Identidade visual" icon={<PaintBucket className="h-5 w-5" />}>
                   <InfoRow label="Direção do logo" value={briefing.visual_identity.logo_direction} />
+                  <LogoConceptBoard concept={briefing.visual_identity.logo_concept_board} />
 
                   <div>
                     <h4 className="text-sm font-medium text-[hsl(30,10%,50%)] mb-2">Paleta de cores</h4>
@@ -206,6 +257,12 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
         <TabsContent value="moodboard" className="mt-0">
           <Card className="rounded-2xl border border-[hsl(38,25%,88%)] bg-white shadow-sm">
             <CardContent className="p-6 space-y-6">
+              <StageAction
+                stage="moodboard"
+                readOnly={readOnly}
+                isLoading={regeneratingStage === "moodboard"}
+                onRegenerate={regenerateStage}
+              />
               <Section title="Moodboard criativo" icon={<Camera className="h-5 w-5" />}>
                 <div>
                   <h4 className="text-sm font-medium text-[hsl(30,10%,50%)] mb-1">Palavras-chave</h4>
@@ -246,22 +303,31 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
         <TabsContent value="prompts" className="mt-0">
           <Card className="rounded-2xl border border-[hsl(38,25%,88%)] bg-white shadow-sm">
             <CardContent className="p-6 space-y-6">
+              <StageAction
+                stage="prompts"
+                readOnly={readOnly}
+                isLoading={regeneratingStage === "prompts"}
+                onRegenerate={regenerateStage}
+              />
               <Section title="Prompts para execução" icon={<Sparkles className="h-5 w-5" />}>
                 {[
                   { label: "Prompt mestre de execução", prompt: prompts.master_execution_prompt },
                   { label: "Landing Page", prompt: prompts.landing_page_prompt },
-                  { label: "Logo", prompt: prompts.logo_prompt },
+                  { label: "Logo principal", prompt: prompts.logo_prompt },
+                  prompts.logo_concept_board_prompt
+                    ? { label: "Prancha de identidade visual", prompt: prompts.logo_concept_board_prompt }
+                    : null,
                   { label: "Imagem do Moodboard", prompt: prompts.moodboard_image_prompt },
                   { label: "Social Media", prompt: prompts.social_media_prompt },
                   { label: "Lovable / Cursor", prompt: prompts.lovable_or_cursor_prompt },
-                ].map((item, idx) => (
+                ].filter(Boolean).map((item, idx) => (
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-[hsl(30,10%,50%)]">{item.label}</h4>
-                      <CopyButton text={item.prompt} label={item.label} />
+                      <h4 className="text-sm font-medium text-[hsl(30,10%,50%)]">{item!.label}</h4>
+                      <CopyButton text={item!.prompt} label={item!.label} />
                     </div>
                     <p className="text-sm bg-[hsl(38,30%,94%)] p-3 rounded-xl whitespace-pre-wrap leading-relaxed">
-                      {item.prompt}
+                      {item!.prompt}
                     </p>
                   </div>
                 ))}
@@ -274,7 +340,16 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
         <TabsContent value="entregaveis" className="mt-0">
           <Card className="rounded-2xl border border-[hsl(38,25%,88%)] bg-white shadow-sm">
             <CardContent className="p-6 space-y-6">
-              <Section title="Entregáveis sugeridos">
+              <StageAction
+                stage="deliverables"
+                readOnly={readOnly}
+                isLoading={regeneratingStage === "deliverables"}
+                onRegenerate={regenerateStage}
+              />
+              <Section title="Pacote de entregáveis">
+                <p className="text-sm text-[hsl(30,10%,45%)]">
+                  Lista de materiais que devem sair prontos para execução, exportação ou apresentação em portfólio.
+                </p>
                 <ul className="space-y-2">
                   {briefing.deliverables.map((d, i) => (
                     <li key={i} className="flex items-center gap-2">
@@ -312,6 +387,48 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function LogoConceptBoard({
+  concept,
+}: {
+  concept?: BriefingData["visual_identity"]["logo_concept_board"];
+}) {
+  if (!concept) return null;
+
+  return (
+    <div className="rounded-xl border border-[hsl(38,25%,88%)] bg-[hsl(38,30%,97%)] p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h4 className="text-sm font-semibold text-[hsl(30,25%,20%)]">
+            Concepção da logo: {concept.concept_name}
+          </h4>
+          <p className="text-xs text-[hsl(30,10%,50%)] mt-1">
+            Tipo: {concept.logo_type}
+          </p>
+        </div>
+        <CopyButton text={logoConceptToText(concept)} label="Concepção da logo" />
+      </div>
+      <InfoRow label="Composição da prancha" value={concept.composition} />
+      <ConceptList title="Simbologia" items={concept.symbol_meaning} />
+      <ConceptList title="Variações obrigatórias" items={concept.required_variations} />
+      <ConceptList title="Seções do documento visual" items={concept.board_sections} />
+      <ConceptList title="Notas para geração" items={concept.production_notes} />
+    </div>
+  );
+}
+
+function ConceptList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <h4 className="text-sm font-medium text-[hsl(30,10%,50%)] mb-1">{title}</h4>
+      <ul className="list-disc list-inside text-sm text-[hsl(30,15%,30%)] space-y-1">
+        {items.map((item, index) => (
+          <li key={index}>{item}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function Section({ title, children, icon }: { title: string; children: React.ReactNode; icon?: React.ReactNode }) {
   return (
     <div>
@@ -320,6 +437,46 @@ function Section({ title, children, icon }: { title: string; children: React.Rea
         <h3 className="font-serif text-lg font-semibold">{title}</h3>
       </div>
       <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+const stageLabels: Record<StageKey, string> = {
+  briefing: "briefing",
+  brand: "marca",
+  moodboard: "moodboard",
+  prompts: "prompts",
+  deliverables: "entregáveis",
+};
+
+function StageAction({
+  stage,
+  readOnly,
+  isLoading,
+  onRegenerate,
+}: {
+  stage: StageKey;
+  readOnly: boolean;
+  isLoading: boolean;
+  onRegenerate: (stage: StageKey) => void;
+}) {
+  if (readOnly) {
+    return null;
+  }
+
+  return (
+    <div className="flex justify-end">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="rounded-xl bg-white"
+        onClick={() => onRegenerate(stage)}
+        disabled={isLoading}
+      >
+        <RotateCcw className={isLoading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+        {isLoading ? "Regenerando..." : `Regenerar ${stageLabels[stage]}`}
+      </Button>
     </div>
   );
 }
@@ -376,4 +533,26 @@ ${skill.instructions.map((item, index) => `${index + 1}. ${item}`).join("\n")}
 
 Quality checks:
 ${skill.quality_checks.map((item, index) => `${index + 1}. ${item}`).join("\n")}`;
+}
+
+function logoConceptToText(
+  concept: NonNullable<BriefingData["visual_identity"]["logo_concept_board"]>
+): string {
+  return `Concepção da logo: ${concept.concept_name}
+Tipo: ${concept.logo_type}
+
+Composição:
+${concept.composition}
+
+Simbologia:
+${concept.symbol_meaning.map((item, index) => `${index + 1}. ${item}`).join("\n")}
+
+Variações obrigatórias:
+${concept.required_variations.map((item, index) => `${index + 1}. ${item}`).join("\n")}
+
+Seções do documento visual:
+${concept.board_sections.map((item, index) => `${index + 1}. ${item}`).join("\n")}
+
+Notas para geração:
+${concept.production_notes.map((item, index) => `${index + 1}. ${item}`).join("\n")}`;
 }

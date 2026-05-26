@@ -7,6 +7,8 @@ import { ptBR } from "date-fns/locale";
 import DeleteProjectButton from "@/components/delete-project-button";
 import { AppButton } from "@/components/app-button";
 import { ProjectDataError } from "@/components/project-data-error";
+import { ProjectFilters } from "@/components/project-filters";
+import { requirePageAccess } from "@/lib/server-access";
 
 export const dynamic = 'force-dynamic';
 
@@ -29,11 +31,23 @@ function BusinessIcon({ type }: { type: string }) {
   return <span className="text-2xl">{icons[type] || '✨'}</span>;
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  await requirePageAccess("/dashboard");
+
+  const filters = await searchParams;
   let rows: ReturnType<typeof getProjectPreviews>;
 
   try {
-    rows = getProjectPreviews();
+    rows = getProjectPreviews({
+      q: typeof filters.q === "string" ? filters.q : undefined,
+      business_type: typeof filters.business_type === "string" ? filters.business_type : undefined,
+      visual_style: typeof filters.visual_style === "string" ? filters.visual_style : undefined,
+      project_goal: typeof filters.project_goal === "string" ? filters.project_goal : undefined,
+    });
   } catch (error) {
     if (isProjectDatabaseError(error)) {
       return <ProjectDataError />;
@@ -53,15 +67,9 @@ export default async function DashboardPage() {
             Gerencie seus clientes fictícios e use os briefings para criar projetos incríveis de portfólio.
           </p>
         </div>
-        {rows.length > 0 && (
-          <AppButton asChild>
-            <Link href="/projects/new">
-              <PenLine className="h-4 w-4 mr-2" />
-              Novo briefing
-            </Link>
-          </AppButton>
-        )}
       </div>
+
+      <ProjectFilters />
 
       {rows.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">

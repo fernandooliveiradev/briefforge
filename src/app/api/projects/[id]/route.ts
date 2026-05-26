@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteProject, getProjectById, isProjectDatabaseError } from '@/lib/db';
 import { parseProjectId } from '@/lib/project-id';
+import { requireApiAccess } from '@/lib/server-access';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauthorized = await requireApiAccess();
+  if (unauthorized) return unauthorized;
+
   const { id } = await params;
   const projectId = parseProjectId(id);
 
@@ -37,6 +41,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const unauthorized = await requireApiAccess();
+  if (unauthorized) return unauthorized;
+
   const { id } = await params;
   const projectId = parseProjectId(id);
 

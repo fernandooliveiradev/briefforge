@@ -4,6 +4,10 @@
 
 Security fixes are accepted for the current `main` branch.
 
+## Deployment Safety
+
+BriefForge is local-first by default. If you expose it outside your own machine, set `BRIEFFORGE_ACCESS_PASSWORD` and keep API keys in server-side environment variables only. Public `/share/...` links are designed to be read-only.
+
 ## Reporting a Vulnerability
 
 Please do not open a public issue for a suspected vulnerability.

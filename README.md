@@ -13,8 +13,13 @@ BriefForge is early-stage open source software. The current focus is a stable lo
 ## Features
 
 - Generate fictional clients by business type, visual style, project goal, language, and complexity.
-- Produce structured brand, audience, visual identity, moodboard, prompts, deliverables, and agent skills.
+- Produce structured brand, audience, visual identity, logo concept board, moodboard, prompts, production-ready deliverables, and agent skills.
 - Copy execution prompts for design, development, and content workflows.
+- Export briefings as Markdown or through a print-ready PDF view.
+- Duplicate briefings into versioned variants.
+- Search and filter the dashboard by name, segment, style, and project goal.
+- Regenerate an individual stage without replacing the whole briefing.
+- Share a read-only public link when needed.
 - Store projects locally in SQLite.
 - Delete generated projects from dashboard or detail pages.
 - Run as a local-first Next.js app.
@@ -28,13 +33,13 @@ BriefForge is early-stage open source software. The current focus is a stable lo
 - Radix UI / shadcn-style components
 - Zod
 - Native SQLite via `node:sqlite`
-- OpenAI API
+- OpenAI API or DeepSeek API
 
 ## Requirements
 
 - Node.js 24 or 25
 - pnpm 10 or newer
-- An OpenAI API key
+- An OpenAI or DeepSeek API key
 
 ## Getting Started
 
@@ -53,8 +58,20 @@ cp .env.example .env
 Fill the required values:
 
 ```bash
+AI_PROVIDER=openai
 OPENAI_API_KEY=your_api_key
 ```
+
+To use DeepSeek instead:
+
+```bash
+AI_PROVIDER=deepseek
+DEEPSEEK_API_KEY=your_deepseek_key
+DEEPSEEK_MODEL=deepseek-v4-pro
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+```
+
+Restart the server after changing the provider. See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md) for details.
 
 Start the development server:
 
@@ -68,7 +85,15 @@ Open http://localhost:3000.
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `OPENAI_API_KEY` | Yes | Server-side key used to generate briefings. |
+| `AI_PROVIDER` | No | Active provider. Use `openai` or `deepseek`. Defaults to `openai`. |
+| `OPENAI_API_KEY` | When `AI_PROVIDER=openai` | Server-side OpenAI key. |
+| `OPENAI_MODEL` | No | OpenAI chat model. Defaults to `gpt-4o`. |
+| `OPENAI_BASE_URL` | No | OpenAI-compatible base URL. Defaults to `https://api.openai.com/v1`. |
+| `DEEPSEEK_API_KEY` | When `AI_PROVIDER=deepseek` | Server-side DeepSeek key. |
+| `DEEPSEEK_MODEL` | No | DeepSeek chat model. Defaults to `deepseek-v4-pro`. |
+| `DEEPSEEK_BASE_URL` | No | DeepSeek base URL. Defaults to `https://api.deepseek.com`. |
+| `BRIEFFORGE_ACCESS_PASSWORD` | No | Optional password gate for private routes and project APIs. Recommended for any deployed instance. |
+| `BRIEFFORGE_SESSION_SECRET` | No | Optional extra secret used to derive the access cookie. Recommended when access control is enabled. |
 
 ## Scripts
 
@@ -100,6 +125,7 @@ scripts/                 Local Next.js runner helpers
 
 - Do not commit `.env`, `data/`, logs, or generated build folders.
 - API keys must stay server-side.
+- Set `BRIEFFORGE_ACCESS_PASSWORD` before exposing the app outside your own machine. Public share links remain available in read-only mode.
 - The local SQLite database is intended for local development and single-instance use.
 - Report vulnerabilities privately. See `SECURITY.md`.
 

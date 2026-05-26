@@ -5,10 +5,14 @@ import {
   isProjectDatabaseError,
   type BriefingData,
 } from '@/lib/db';
-import { generateBriefingAI, hasAiKey, OPENAI_BRIEFING_MODEL } from '@/lib/generate-briefing-ai';
+import { generateBriefingAI, getActiveAiModelLabel, hasAiKey } from '@/lib/generate-briefing-ai';
 import { projectRequestSchema } from '@/lib/project-options';
+import { requireApiAccess } from '@/lib/server-access';
 
 export async function GET() {
+  const unauthorized = await requireApiAccess();
+  if (unauthorized) return unauthorized;
+
   try {
     const projects = getAllProjects().map((row) => ({
       ...row,
@@ -25,6 +29,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const unauthorized = await requireApiAccess();
+  if (unauthorized) return unauthorized;
+
   const body = await request.json().catch(() => null);
   const parsedBody = projectRequestSchema.safeParse(body);
 
@@ -71,7 +78,7 @@ export async function POST(request: NextRequest) {
       language,
       complexity,
       briefing: JSON.stringify(briefingData),
-      ai_model: OPENAI_BRIEFING_MODEL,
+      ai_model: getActiveAiModelLabel(),
     });
   } catch (error) {
     console.error('Erro ao salvar projeto:', error);
@@ -86,7 +93,7 @@ export async function POST(request: NextRequest) {
       ...newProject,
       briefing: JSON.parse(newProject.briefing),
       powered_by_ai: true,
-      ai_model: OPENAI_BRIEFING_MODEL,
+      ai_model: getActiveAiModelLabel(),
     },
     { status: 201 }
   );

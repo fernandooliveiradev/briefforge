@@ -10,7 +10,7 @@ const Navbar = () => {
   const pathname = usePathname();
 
   return (
-    <header className="border-b border-neutral-200 bg-neutral-50 sticky top-0 z-50">
+    <header className="border-b border-neutral-200 bg-neutral-50 sticky top-0 z-50 print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Hammer className="h-6 w-6 text-neutral-900" />
