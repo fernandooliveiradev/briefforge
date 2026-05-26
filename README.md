@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BriefForge
+
+BriefForge generates fictional client briefings for portfolio projects. It creates a complete project package with briefing, brand direction, moodboard notes, execution prompts, deliverables, and stage-specific agent skills.
+
+The app intentionally uses real AI generation only. If the AI call fails, the project is not saved.
+
+Created and maintained by [Fernando de Oliveira](https://fernandodeoliveira.pro).
+
+## Status
+
+BriefForge is early-stage open source software. The current focus is a stable local-first workflow for generating and managing fictional client briefings.
+
+## Features
+
+- Generate fictional clients by business type, visual style, project goal, language, and complexity.
+- Produce structured brand, audience, visual identity, moodboard, prompts, deliverables, and agent skills.
+- Copy execution prompts for design, development, and content workflows.
+- Store projects locally in SQLite.
+- Delete generated projects from dashboard or detail pages.
+- Run as a local-first Next.js app.
+
+## Tech Stack
+
+- Next.js App Router
+- React
+- TypeScript
+- Tailwind CSS
+- Radix UI / shadcn-style components
+- Zod
+- Native SQLite via `node:sqlite`
+- OpenAI API
+
+## Requirements
+
+- Node.js 24 or 25
+- pnpm 10 or newer
+- An OpenAI API key
 
 ## Getting Started
 
-First, run the development server:
+Install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create your local environment file:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Fill the required values:
 
-## Learn More
+```bash
+OPENAI_API_KEY=your_api_key
+```
 
-To learn more about Next.js, take a look at the following resources:
+Start the development server:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open http://localhost:3000.
 
-## Deploy on Vercel
+## Environment Variables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Variable | Required | Description |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | Yes | Server-side key used to generate briefings. |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Scripts
+
+```bash
+pnpm dev        # start local development
+pnpm build      # build for production
+pnpm start      # start a production build
+pnpm typecheck  # run TypeScript checks
+pnpm check      # typecheck and build
+```
+
+## Data Storage
+
+Generated projects are stored locally in `data/briefforge.sqlite`, ignored by Git.
+
+SQLite is configured with WAL mode, foreign keys, a busy timeout, parameterized queries, explicit transactions, and a versioned schema via `PRAGMA user_version`. Remove `data/briefforge.sqlite` if you want to start with a clean local database.
+
+## Project Structure
+
+```text
+src/app/                 Next.js routes and API handlers
+src/components/          Reusable UI and app components
+src/components/ui/       Base UI primitives
+src/lib/                 AI generation, local database, validation, utilities
+scripts/                 Local Next.js runner helpers
+```
+
+## Security Notes
+
+- Do not commit `.env`, `data/`, logs, or generated build folders.
+- API keys must stay server-side.
+- The local SQLite database is intended for local development and single-instance use.
+- Report vulnerabilities privately. See `SECURITY.md`.
+
+## Contributing
+
+Issues and pull requests are welcome. Please read `CONTRIBUTING.md` before opening a PR.
+
+## Changelog
+
+See `CHANGELOG.md`.
+
+## Maintainer
+
+Created and maintained by [Fernando de Oliveira](https://fernandodeoliveira.pro).
+
+## License
+
+Apache-2.0. See `LICENSE`.

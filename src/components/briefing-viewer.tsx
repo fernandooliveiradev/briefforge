@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BriefingData } from "@/lib/db";
+import type { AgentSkill, BriefingData } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
 
 export default function BriefingViewer({ briefing, client_name, business_type }: BriefingViewerProps) {
   const [activeTab, setActiveTab] = useState("briefing");
+  const { agent_skills: skills, prompts } = briefing;
 
   return (
     <div className="space-y-6">
@@ -47,10 +48,10 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
         </div>
         <div className="flex flex-wrap gap-2">
           <Badge variant="secondary" className="rounded-full bg-[hsl(38,30%,92%)] text-[hsl(30,15%,35%)]">
-            {briefing.brand.personality[0]}
+            {briefing.brand.tagline}
           </Badge>
           <Badge variant="secondary" className="rounded-full bg-[hsl(38,30%,92%)] text-[hsl(30,15%,35%)]">
-            {briefing.visual_identity.typography.heading}
+            {briefing.brand.positioning}
           </Badge>
         </div>
       </div>
@@ -120,6 +121,7 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
                   </ul>
                 </div>
               </Section>
+              <SkillBox skill={skills?.briefing} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -195,6 +197,7 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
                     </div>
                   </div>
                 </Section>
+                <SkillBox skill={skills?.brand} />
               </CardContent>
             </Card>
           </div>
@@ -235,6 +238,7 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
                   </div>
                 </div>
               </Section>
+              <SkillBox skill={skills?.moodboard} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -244,11 +248,12 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
             <CardContent className="p-6 space-y-6">
               <Section title="Prompts para execução" icon={<Sparkles className="h-5 w-5" />}>
                 {[
-                  { label: "Landing Page", prompt: briefing.prompts.landing_page_prompt },
-                  { label: "Logo", prompt: briefing.prompts.logo_prompt },
-                  { label: "Imagem do Moodboard", prompt: briefing.prompts.moodboard_image_prompt },
-                  { label: "Social Media", prompt: briefing.prompts.social_media_prompt },
-                  { label: "Lovable / Cursor", prompt: briefing.prompts.lovable_or_cursor_prompt },
+                  { label: "Prompt mestre de execução", prompt: prompts.master_execution_prompt },
+                  { label: "Landing Page", prompt: prompts.landing_page_prompt },
+                  { label: "Logo", prompt: prompts.logo_prompt },
+                  { label: "Imagem do Moodboard", prompt: prompts.moodboard_image_prompt },
+                  { label: "Social Media", prompt: prompts.social_media_prompt },
+                  { label: "Lovable / Cursor", prompt: prompts.lovable_or_cursor_prompt },
                 ].map((item, idx) => (
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center justify-between">
@@ -261,6 +266,7 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
                   </div>
                 ))}
               </Section>
+              <SkillBox skill={skills?.prompts} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -288,6 +294,7 @@ export default function BriefingViewer({ briefing, client_name, business_type }:
                   ))}
                 </ul>
               </Section>
+              <SkillBox skill={skills?.deliverables} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -315,4 +322,58 @@ function Section({ title, children, icon }: { title: string; children: React.Rea
       <div className="space-y-3">{children}</div>
     </div>
   );
+}
+
+function SkillBox({ skill }: { skill?: AgentSkill }) {
+  if (!skill) return null;
+
+  return (
+    <div className="rounded-xl border border-[hsl(38,25%,88%)] bg-[hsl(38,30%,97%)] p-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h4 className="text-sm font-semibold text-[hsl(30,25%,20%)]">Skill do agente: {skill.name}</h4>
+          <p className="text-sm text-[hsl(30,15%,35%)] mt-1">{skill.description}</p>
+          <p className="text-xs text-[hsl(30,10%,50%)] mt-1">
+            Instrução reutilizável para outro agente seguir nesta etapa. Copie apenas se for executar fora do BriefForge.
+          </p>
+          <p className="text-xs text-[hsl(30,10%,50%)] mt-1">Quando usar: {skill.when_to_use}</p>
+        </div>
+        <CopyButton text={skillToText(skill)} label={`Skill ${skill.name}`} />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <h5 className="text-xs font-semibold uppercase tracking-wide text-[hsl(30,10%,45%)] mb-2">Instruções</h5>
+          <ul className="list-disc list-inside text-sm text-[hsl(30,15%,30%)] space-y-1">
+            {skill.instructions.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h5 className="text-xs font-semibold uppercase tracking-wide text-[hsl(30,10%,45%)] mb-2">Checks de qualidade</h5>
+          <ul className="list-disc list-inside text-sm text-[hsl(30,15%,30%)] space-y-1">
+            {skill.quality_checks.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function skillToText(skill: AgentSkill): string {
+  return `---
+name: ${skill.name}
+description: ${skill.description}
+---
+
+When to use:
+${skill.when_to_use}
+
+Instructions:
+${skill.instructions.map((item, index) => `${index + 1}. ${item}`).join("\n")}
+
+Quality checks:
+${skill.quality_checks.map((item, index) => `${index + 1}. ${item}`).join("\n")}`;
 }

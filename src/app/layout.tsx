@@ -29,7 +29,8 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${playfair.variable} antialiased bg-[hsl(38,35%,97%)] text-[hsl(30,15%,20%)] font-sans`}
+        className={`${inter.variable} ${playfair.variable} antialiased bg-neutral-50 text-neutral-950 font-sans`}
+        suppressHydrationWarning
       >
         <ThemeProvider
           attribute="class"

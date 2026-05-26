@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { AppButton } from "@/components/app-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,44 +14,13 @@ import {
 } from "@/components/ui/select";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-
-const businessTypes = [
-  { value: "restaurante", label: "Restaurante" },
-  { value: "clinica", label: "Clínica" },
-  { value: "saas", label: "SaaS" },
-  { value: "loja_virtual", label: "Loja virtual" },
-  { value: "marca_pessoal", label: "Marca pessoal" },
-  { value: "advocacia", label: "Advocacia" },
-  { value: "imobiliaria", label: "Imobiliária" },
-  { value: "academia", label: "Academia" },
-  { value: "estudio_criativo", label: "Estúdio criativo" },
-];
-
-const visualStyles = [
-  { value: "minimalista", label: "Minimalista" },
-  { value: "premium", label: "Premium" },
-  { value: "futurista", label: "Futurista" },
-  { value: "divertido", label: "Divertido" },
-  { value: "editorial", label: "Editorial" },
-  { value: "luxo", label: "Luxo" },
-  { value: "tech", label: "Tech" },
-  { value: "organico", label: "Orgânico" },
-];
-
-const projectGoals = [
-  { value: "landing_page", label: "Landing page" },
-  { value: "identidade_visual", label: "Identidade visual" },
-  { value: "ecommerce", label: "E-commerce" },
-  { value: "app", label: "App" },
-  { value: "social_media", label: "Social media" },
-  { value: "apresentacao_comercial", label: "Apresentação comercial" },
-];
-
-const complexities = [
-  { value: "simples", label: "Simples" },
-  { value: "intermediario", label: "Intermediário" },
-  { value: "completo", label: "Completo" },
-];
+import {
+  businessTypeOptions,
+  complexityOptions,
+  languageOptions,
+  projectGoalOptions,
+  visualStyleOptions,
+} from "@/lib/project-options";
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -78,14 +47,17 @@ export default function NewProjectPage() {
         body: JSON.stringify(form),
       });
 
-      if (!res.ok) throw new Error("Falha ao gerar briefing");
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => null);
+        throw new Error(errorBody?.error || "Falha ao gerar briefing");
+      }
 
       const project = await res.json();
-      toast.success("Briefing criado com sucesso!");
+      toast.success("Briefing criado com sucesso.");
       router.push(`/projects/${project.id}`);
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao gerar. Tente novamente.");
+      toast.error(err instanceof Error ? err.message : "Erro ao gerar. Tente novamente.");
     } finally {
       setIsGenerating(false);
     }
@@ -95,14 +67,14 @@ export default function NewProjectPage() {
     <div className="max-w-2xl mx-auto space-y-8">
       <div>
         <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight">
-          Criar cliente fake
+          Novo briefing
         </h1>
-        <p className="text-[hsl(30,10%,40%)] mt-1">
-          Preencha os parâmetros e o BriefForge vai gerar um briefing completo com identidade, moodboard e prompts.
+        <p className="text-neutral-600 mt-1">
+          Preencha os parâmetros e o BriefForge vai gerar um briefing completo com identidade, moodboard, prompts e skills por etapa.
         </p>
       </div>
 
-      <Card className="rounded-2xl border border-[hsl(38,25%,88%)] bg-white shadow-sm">
+      <Card className="rounded-2xl border border-neutral-200 bg-white shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle className="font-serif text-xl font-semibold">Parâmetros do briefing</CardTitle>
         </CardHeader>
@@ -119,13 +91,14 @@ export default function NewProjectPage() {
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {businessTypes.map((bt) => (
+                    {businessTypeOptions.map((bt) => (
                       <SelectItem key={bt.value} value={bt.value}>
                         {bt.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <FieldHint>Define o segmento e guia nome, público, dores e contexto do cliente.</FieldHint>
               </div>
 
               <div className="space-y-2">
@@ -138,13 +111,14 @@ export default function NewProjectPage() {
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {visualStyles.map((vs) => (
+                    {visualStyleOptions.map((vs) => (
                       <SelectItem key={vs.value} value={vs.value}>
                         {vs.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <FieldHint>Direciona paleta, tipografia, moodboard, tom visual e estilo dos prompts.</FieldHint>
               </div>
 
               <div className="space-y-2">
@@ -157,13 +131,14 @@ export default function NewProjectPage() {
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {projectGoals.map((g) => (
+                    {projectGoalOptions.map((g) => (
                       <SelectItem key={g.value} value={g.value}>
                         {g.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <FieldHint>Indica o principal resultado esperado: site, identidade, social, app ou deck.</FieldHint>
               </div>
 
               <div className="space-y-2">
@@ -176,10 +151,14 @@ export default function NewProjectPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="portugues">Português</SelectItem>
-                    <SelectItem value="ingles">Inglês</SelectItem>
+                    {languageOptions.map((languageOption) => (
+                      <SelectItem key={languageOption.value} value={languageOption.value}>
+                        {languageOption.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                <FieldHint>Escolhe o idioma de todo o briefing, prompts e skills gerados.</FieldHint>
               </div>
 
               <div className="space-y-2 sm:col-span-2">
@@ -192,40 +171,43 @@ export default function NewProjectPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {complexities.map((c) => (
+                    {complexityOptions.map((c) => (
                       <SelectItem key={c.value} value={c.value}>
                         {c.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <FieldHint>Controla a profundidade: simples é direto; completo traz mais análise, textos e critérios.</FieldHint>
               </div>
             </div>
 
-            <Button
-              type="submit"
-              disabled={!isFormValid || isGenerating}
-              className="w-full bg-[hsl(30,45%,45%)] hover:bg-[hsl(30,45%,50%)] text-white rounded-xl py-6 h-auto text-base font-medium disabled:opacity-50"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Gerando briefing...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  Gerar briefing
-                </>
-              )}
-            </Button>
+            <div className="flex justify-end">
+              <AppButton
+                type="submit"
+                disabled={!isFormValid || isGenerating}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Gerando briefing...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    Gerar briefing
+                  </>
+                )}
+              </AppButton>
+            </div>
           </form>
         </CardContent>
       </Card>
 
-      <div className="text-center text-sm text-[hsl(30,10%,50%)]">
-        O briefing será gerado com base nos parâmetros e ficará salvo no seu dashboard.
-      </div>
     </div>
   );
+}
+
+function FieldHint({ children }: { children: React.ReactNode }) {
+  return <p className="text-xs leading-relaxed text-neutral-500">{children}</p>;
 }
