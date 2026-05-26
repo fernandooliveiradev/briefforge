@@ -39,10 +39,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Parâmetros inválidos.' }, { status: 400 });
   }
 
-  const { business_type, visual_style, project_goal, language, complexity } = parsedBody.data;
+  const { business_type, visual_style, project_goal, language, complexity, ai_provider } = parsedBody.data;
   let briefingData: BriefingData;
+  const aiModel = getActiveAiModelLabel(ai_provider);
 
-  if (!hasAiKey()) {
+  if (!hasAiKey(ai_provider)) {
     return NextResponse.json(
       { error: 'Geração indisponível no momento. O briefing não foi criado.' },
       { status: 503 }
@@ -56,6 +57,7 @@ export async function POST(request: NextRequest) {
       project_goal,
       language,
       complexity,
+      provider: ai_provider,
     });
   } catch (error: unknown) {
     console.error('Erro na geração por IA:', error);
@@ -78,7 +80,7 @@ export async function POST(request: NextRequest) {
       language,
       complexity,
       briefing: JSON.stringify(briefingData),
-      ai_model: getActiveAiModelLabel(),
+      ai_model: aiModel,
     });
   } catch (error) {
     console.error('Erro ao salvar projeto:', error);
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
       ...newProject,
       briefing: JSON.parse(newProject.briefing),
       powered_by_ai: true,
-      ai_model: getActiveAiModelLabel(),
+      ai_model: aiModel,
     },
     { status: 201 }
   );

@@ -13,6 +13,7 @@ BriefForge is early-stage open source software. The current focus is a stable lo
 ## Features
 
 - Generate fictional clients by business type, visual style, project goal, language, and complexity.
+- Choose OpenAI/GPT or DeepSeek per briefing from the creation screen.
 - Produce structured brand, audience, visual identity, logo concept board, moodboard, prompts, production-ready deliverables, and agent skills.
 - Copy execution prompts for design, development, and content workflows.
 - Export briefings as Markdown or through a print-ready PDF view.
@@ -55,23 +56,22 @@ Create your local environment file:
 cp .env.example .env
 ```
 
-Fill the required values:
+Fill the values for the providers you want to use:
 
 ```bash
 AI_PROVIDER=openai
 OPENAI_API_KEY=your_api_key
 ```
 
-To use DeepSeek instead:
+To enable DeepSeek too:
 
 ```bash
-AI_PROVIDER=deepseek
 DEEPSEEK_API_KEY=your_deepseek_key
 DEEPSEEK_MODEL=deepseek-v4-pro
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
 
-Restart the server after changing the provider. See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md) for details.
+`AI_PROVIDER` controls the default selected option on the creation screen. You can still choose OpenAI/GPT or DeepSeek per briefing in the UI, as long as that provider has a key configured. Restart the server after changing environment variables. See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md) for details.
 
 Start the development server:
 
@@ -85,11 +85,11 @@ Open http://localhost:3000.
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `AI_PROVIDER` | No | Active provider. Use `openai` or `deepseek`. Defaults to `openai`. |
-| `OPENAI_API_KEY` | When `AI_PROVIDER=openai` | Server-side OpenAI key. |
+| `AI_PROVIDER` | No | Default provider selected in the UI. Use `openai` or `deepseek`. Defaults to `openai`. |
+| `OPENAI_API_KEY` | When using OpenAI/GPT | Server-side OpenAI key. |
 | `OPENAI_MODEL` | No | OpenAI chat model. Defaults to `gpt-4o`. |
 | `OPENAI_BASE_URL` | No | OpenAI-compatible base URL. Defaults to `https://api.openai.com/v1`. |
-| `DEEPSEEK_API_KEY` | When `AI_PROVIDER=deepseek` | Server-side DeepSeek key. |
+| `DEEPSEEK_API_KEY` | When using DeepSeek | Server-side DeepSeek key. |
 | `DEEPSEEK_MODEL` | No | DeepSeek chat model. Defaults to `deepseek-v4-pro`. |
 | `DEEPSEEK_BASE_URL` | No | DeepSeek base URL. Defaults to `https://api.deepseek.com`. |
 | `BRIEFFORGE_ACCESS_PASSWORD` | No | Optional password gate for private routes and project APIs. Recommended for any deployed instance. |

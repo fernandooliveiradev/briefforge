@@ -14,7 +14,9 @@ import {
 } from "@/components/ui/select";
 import { Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import type { AiProvider } from "@/lib/generate-briefing-ai";
 import {
+  aiProviderOptions,
   businessTypeOptions,
   complexityOptions,
   languageOptions,
@@ -22,7 +24,7 @@ import {
   visualStyleOptions,
 } from "@/lib/project-options";
 
-export function NewProjectForm() {
+export function NewProjectForm({ defaultAiProvider }: { defaultAiProvider: AiProvider }) {
   const router = useRouter();
   const [isGenerating, setIsGenerating] = useState(false);
   const [form, setForm] = useState({
@@ -31,6 +33,7 @@ export function NewProjectForm() {
     project_goal: "",
     language: "portugues",
     complexity: "completo",
+    ai_provider: defaultAiProvider,
   });
 
   const isFormValid = form.business_type && form.visual_style && form.project_goal;
@@ -179,6 +182,26 @@ export function NewProjectForm() {
                   </SelectContent>
                 </Select>
                 <FieldHint>Controla a profundidade: simples é direto; completo traz mais análise, textos e critérios.</FieldHint>
+              </div>
+
+              <div className="space-y-2 sm:col-span-2">
+                <Label htmlFor="ai_provider">Modelo de IA</Label>
+                <Select
+                  value={form.ai_provider}
+                  onValueChange={(v) => setForm({ ...form, ai_provider: v as AiProvider })}
+                >
+                  <SelectTrigger id="ai_provider" className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {aiProviderOptions.map((providerOption) => (
+                      <SelectItem key={providerOption.value} value={providerOption.value}>
+                        {providerOption.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldHint>Escolhe qual provedor vai gerar este briefing. A regeneração das etapas seguirá a mesma escolha.</FieldHint>
               </div>
             </div>
 

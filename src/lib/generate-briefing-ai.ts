@@ -19,8 +19,8 @@ function cleanBaseUrl(value: string): string {
   return value.replace(/\/+$/, '');
 }
 
-export function getActiveAiProvider(): AiProvider {
-  const provider = (process.env.AI_PROVIDER || 'openai').toLowerCase();
+export function getActiveAiProvider(providerOverride?: AiProvider): AiProvider {
+  const provider = (providerOverride || process.env.AI_PROVIDER || 'openai').toLowerCase();
 
   if (provider !== 'openai' && provider !== 'deepseek') {
     throw new Error('AI_PROVIDER must be either "openai" or "deepseek"');
@@ -29,8 +29,8 @@ export function getActiveAiProvider(): AiProvider {
   return provider;
 }
 
-export function getActiveAiConfig(): AiProviderConfig {
-  const provider = getActiveAiProvider();
+export function getActiveAiConfig(providerOverride?: AiProvider): AiProviderConfig {
+  const provider = getActiveAiProvider(providerOverride);
 
   if (provider === 'deepseek') {
     return {
@@ -53,14 +53,14 @@ export function getActiveAiConfig(): AiProviderConfig {
   };
 }
 
-export function getActiveAiModelLabel(): string {
-  const config = getActiveAiConfig();
+export function getActiveAiModelLabel(providerOverride?: AiProvider): string {
+  const config = getActiveAiConfig(providerOverride);
   return `${config.provider}:${config.model}`;
 }
 
-export function hasAiKey(): boolean {
+export function hasAiKey(providerOverride?: AiProvider): boolean {
   try {
-    return !!getActiveAiConfig().apiKey;
+    return !!getActiveAiConfig(providerOverride).apiKey;
   } catch {
     return false;
   }
@@ -497,8 +497,9 @@ export async function generateBriefingAI(params: {
   language: string;
   complexity: string;
   focusStage?: RegenerationStage;
+  provider?: AiProvider;
 }): Promise<BriefingData> {
-  const { business_type, visual_style, project_goal, language, complexity, focusStage } = params;
+  const { business_type, visual_style, project_goal, language, complexity, focusStage, provider } = params;
 
   const langName = SUPPORTED_LANGUAGES[language] || 'Portuguese (Brazilian)';
   const complexityInstruction = COMPLEXITY_INSTRUCTIONS[complexity] || COMPLEXITY_INSTRUCTIONS.completo;
@@ -521,7 +522,7 @@ Make deliverables concrete enough for a designer/developer to know exactly what 
 Use the Agent Skills convention from agentskills.io: skill names in lowercase kebab-case, specific descriptions, concise activation criteria, concrete step-by-step instructions, and quality checks.
 Write all textual content in ${langName}. Be creative and specific.`;
 
-  const config = getActiveAiConfig();
+  const config = getActiveAiConfig(provider);
 
   if (!config.apiKey) {
     throw new Error(`${config.displayName} API key is not configured`);
@@ -588,7 +589,7 @@ Write all textual content in ${langName}. Be creative and specific.`;
     clearTimeout(timeoutId);
 
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`${getActiveAiConfig().displayName} request timed out (60s)`);
+      throw new Error(`${getActiveAiConfig(provider).displayName} request timed out (60s)`);
     }
 
     throw error;

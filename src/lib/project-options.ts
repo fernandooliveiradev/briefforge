@@ -43,6 +43,11 @@ export const complexityOptions = [
   { value: 'completo', label: 'Completo' },
 ] as const;
 
+export const aiProviderOptions = [
+  { value: 'openai', label: 'OpenAI / GPT' },
+  { value: 'deepseek', label: 'DeepSeek' },
+] as const;
+
 const optionValues = <T extends ReadonlyArray<{ value: string }>>(options: T) =>
   options.map((option) => option.value) as [T[number]['value'], ...T[number]['value'][]];
 
@@ -52,6 +57,7 @@ export const projectRequestSchema = z.object({
   project_goal: z.enum(optionValues(projectGoalOptions)),
   language: z.enum(optionValues(languageOptions)),
   complexity: z.enum(optionValues(complexityOptions)),
+  ai_provider: z.enum(optionValues(aiProviderOptions)).default('openai'),
 });
 
 export type ProjectRequestInput = z.infer<typeof projectRequestSchema>;

@@ -9,6 +9,7 @@ import {
   generateBriefingAI,
   getActiveAiModelLabel,
   hasAiKey,
+  type AiProvider,
   type RegenerationStage,
 } from '@/lib/generate-briefing-ai';
 import { parseProjectId } from '@/lib/project-id';
@@ -21,6 +22,11 @@ const stages = new Set<RegenerationStage>([
   'prompts',
   'deliverables',
 ]);
+
+function providerFromAiModel(aiModel: string): AiProvider {
+  if (aiModel.startsWith('deepseek:')) return 'deepseek';
+  return 'openai';
+}
 
 function mergeStage(current: BriefingData, regenerated: BriefingData, stage: RegenerationStage): BriefingData {
   if (stage === 'briefing') {
@@ -101,18 +107,20 @@ export async function POST(
     return NextResponse.json({ error: 'Etapa inválida.' }, { status: 400 });
   }
 
-  if (!hasAiKey()) {
-    return NextResponse.json(
-      { error: 'Geração indisponível no momento. A etapa não foi alterada.' },
-      { status: 503 }
-    );
-  }
-
   try {
     const row = getProjectById(projectId);
 
     if (!row) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+    }
+
+    const provider = providerFromAiModel(row.ai_model);
+
+    if (!hasAiKey(provider)) {
+      return NextResponse.json(
+        { error: 'Geração indisponível no momento. A etapa não foi alterada.' },
+        { status: 503 }
+      );
     }
 
     const current = JSON.parse(row.briefing) as BriefingData;
@@ -123,9 +131,10 @@ export async function POST(
       language: row.language,
       complexity: row.complexity,
       focusStage: stage,
+      provider,
     });
     const merged = mergeStage(current, regenerated, stage);
-    const updated = updateProjectBriefing(projectId, JSON.stringify(merged), getActiveAiModelLabel());
+    const updated = updateProjectBriefing(projectId, JSON.stringify(merged), getActiveAiModelLabel(provider));
 
     if (!updated) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
