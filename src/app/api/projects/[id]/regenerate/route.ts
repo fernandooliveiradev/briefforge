@@ -8,6 +8,7 @@ import {
 import {
   generateBriefingAI,
   getActiveAiModelLabel,
+  getAiGenerationPublicMessage,
   hasAiKey,
   type AiProvider,
   type RegenerationStage,
@@ -147,7 +148,7 @@ export async function POST(
   } catch (error) {
     console.error('Erro ao regenerar etapa:', error);
     return NextResponse.json(
-      { error: 'Não foi possível regenerar esta etapa.' },
+      { error: getAiGenerationPublicMessage(error) },
       { status: isProjectDatabaseError(error) ? 503 : 502 }
     );
   }

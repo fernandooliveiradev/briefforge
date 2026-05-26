@@ -5,7 +5,12 @@ import {
   isProjectDatabaseError,
   type BriefingData,
 } from '@/lib/db';
-import { generateBriefingAI, getActiveAiModelLabel, hasAiKey } from '@/lib/generate-briefing-ai';
+import {
+  generateBriefingAI,
+  getActiveAiModelLabel,
+  getAiGenerationPublicMessage,
+  hasAiKey,
+} from '@/lib/generate-briefing-ai';
 import { projectRequestSchema } from '@/lib/project-options';
 import { requireApiAccess } from '@/lib/server-access';
 
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        error: 'A geração falhou. O briefing não foi criado.',
+        error: getAiGenerationPublicMessage(error),
       },
       { status: 502 }
     );

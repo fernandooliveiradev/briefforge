@@ -15,6 +15,30 @@ interface AiProviderConfig {
   responseFormat: unknown;
 }
 
+export class AiGenerationError extends Error {
+  public readonly publicMessage: string;
+  public readonly code: string;
+
+  constructor(message: string, publicMessage?: string, code = 'ai_generation_error') {
+    super(message);
+    this.name = 'AiGenerationError';
+    this.publicMessage = publicMessage || message;
+    this.code = code;
+  }
+}
+
+export function getAiGenerationPublicMessage(error: unknown): string {
+  if (error instanceof AiGenerationError) {
+    return error.publicMessage;
+  }
+
+  if (error instanceof Error && error.message.startsWith('AI response')) {
+    return 'A IA retornou uma resposta incompleta. Tente gerar novamente.';
+  }
+
+  return 'A geração não pôde ser concluída. Tente novamente.';
+}
+
 function cleanBaseUrl(value: string): string {
   return value.replace(/\/+$/, '');
 }
@@ -72,7 +96,7 @@ const COMPLEXITY_INSTRUCTIONS: Record<string, string> = {
   intermediario:
     'Moderately detailed. 3-4 items in arrays, balanced descriptions with some nuance.',
   completo:
-    'Maximum detail and creativity. 5-6 items in arrays, elaborate stories, deep audience analysis, rich descriptions.',
+    'Detailed and creative, but bounded. 4-5 items in arrays, rich descriptions, clear audience analysis and practical criteria.',
 };
 
 const SUPPORTED_LANGUAGES: Record<string, string> = {
@@ -113,6 +137,13 @@ CRITICAL — every field below MUST exist and be non-empty:
   - quality_checks: string[] with 4-6 checks
 
 Return ONLY the JSON object. No markdown, no explanations.
+Keep the output complete but controlled. Do not write endlessly. Respect these size limits:
+- Arrays should usually have 3-5 items.
+- Normal descriptive strings should have 1-3 sentences.
+- Individual execution prompts should have 90-180 words.
+- logo_concept_board_prompt may have 180-280 words.
+- master_execution_prompt must be the longest field, but keep it between 450 and 750 words.
+- Skills instructions should have 5-7 concise steps and quality_checks should have 4-5 concise checks.
 The master_execution_prompt MUST be long and actionable. It must consolidate details from EVERY tab/stage:
 - Briefing: client, segment, location, story, problem, business goal, audience, pains, desires
 - Brand: personality, tone, positioning, tagline, logo direction, logo concept board, colors, typography
@@ -490,6 +521,88 @@ function validateBriefing(raw: any): BriefingData {
   };
 }
 
+async function requestBriefingJson(config: AiProviderConfig, userMessage: string, maxTokens: number): Promise<unknown> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 180_000);
+
+  try {
+    const body: Record<string, unknown> = {
+      model: config.model,
+      messages: [
+        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'user', content: userMessage },
+      ],
+      temperature: 0.75,
+      max_tokens: maxTokens,
+      response_format: config.responseFormat,
+    };
+
+    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new AiGenerationError(
+        `${config.displayName} API error ${response.status}: ${errorText}`,
+        `${config.displayName} recusou a geração. Verifique chave, modelo, saldo e base URL.`,
+        'provider_rejected'
+      );
+    }
+
+    const data = await response.json();
+    const finishReason: string | undefined = data.choices?.[0]?.finish_reason;
+
+    if (finishReason === 'length') {
+      throw new AiGenerationError(
+        `${config.displayName} response reached the token limit before finishing`,
+        `${config.displayName} atingiu o limite de resposta antes de finalizar. Tente novamente ou reduza a complexidade.`,
+        'token_limit'
+      );
+    }
+
+    const content: string | undefined = data.choices?.[0]?.message?.content;
+
+    if (!content || content.trim().length === 0) {
+      throw new AiGenerationError(
+        `${config.displayName} returned empty content`,
+        `${config.displayName} retornou uma resposta vazia. Tente gerar novamente.`,
+        'empty_response'
+      );
+    }
+
+    try {
+      return JSON.parse(content);
+    } catch {
+      throw new AiGenerationError(
+        `${config.displayName} returned invalid JSON`,
+        `${config.displayName} retornou um formato inválido. Tente gerar novamente.`,
+        'invalid_json'
+      );
+    }
+  } catch (error: unknown) {
+    clearTimeout(timeoutId);
+
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new AiGenerationError(
+        `${config.displayName} request timed out (180s)`,
+        `${config.displayName} demorou demais para responder. Tente novamente.`,
+        'timeout'
+      );
+    }
+
+    throw error;
+  }
+}
+
 export async function generateBriefingAI(params: {
   business_type: string;
   visual_style: string;
@@ -520,78 +633,43 @@ ${focusInstruction}
 Make prompts production-ready, with enough context for another AI agent to execute without reading the UI tabs manually.
 Make deliverables concrete enough for a designer/developer to know exactly what files, formats and visual boards must be produced.
 Use the Agent Skills convention from agentskills.io: skill names in lowercase kebab-case, specific descriptions, concise activation criteria, concrete step-by-step instructions, and quality checks.
+Keep the response complete but compact enough to finish in one API response. Do not exceed the size limits defined in the system instructions.
 Write all textual content in ${langName}. Be creative and specific.`;
 
   const config = getActiveAiConfig(provider);
 
   if (!config.apiKey) {
-    throw new Error(`${config.displayName} API key is not configured`);
+    throw new AiGenerationError(
+      `${config.displayName} API key is not configured`,
+      `A chave do ${config.displayName} não está configurada.`,
+      'missing_api_key'
+    );
   }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60_000);
+  const attempts = [
+    { message: userMessage, maxTokens: 12000 },
+    {
+      message: `${userMessage}
 
-  try {
-    const body: Record<string, unknown> = {
-      model: config.model,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userMessage },
-      ],
-      temperature: 0.9,
-      max_tokens: 6000,
-      response_format: config.responseFormat,
-    };
+Compact retry instruction: the previous response may be too long for this model. Keep every required field, but compress wording aggressively. Use 3 items for most arrays, 60-120 words for each execution prompt, 140-220 words for logo_concept_board_prompt, and 320-480 words for master_execution_prompt. Return one valid JSON object only.`,
+      maxTokens: 9000,
+    },
+  ];
 
-    if (config.provider === 'deepseek') {
-      body.thinking = { type: 'disabled' };
-    }
-
-    const response = await fetch(`${config.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.apiKey}`,
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`${config.displayName} API error ${response.status}: ${errorText}`);
-    }
-
-    const data = await response.json();
-    const finishReason: string | undefined = data.choices?.[0]?.finish_reason;
-
-    if (finishReason === 'length') {
-      throw new Error(`${config.displayName} response reached the token limit before finishing`);
-    }
-
-    const content: string | undefined = data.choices?.[0]?.message?.content;
-
-    if (!content || content.trim().length === 0) {
-      throw new Error(`${config.displayName} returned empty content`);
-    }
-
-    let parsed: unknown;
+  for (const [index, attempt] of attempts.entries()) {
     try {
-      parsed = JSON.parse(content);
-    } catch {
-      throw new Error(`${config.displayName} returned invalid JSON`);
+      return validateBriefing(await requestBriefingJson(config, attempt.message, attempt.maxTokens));
+    } catch (error) {
+      const canRetry = error instanceof AiGenerationError && error.code === 'token_limit' && index === 0;
+      if (!canRetry) {
+        throw error;
+      }
     }
-
-    return validateBriefing(parsed);
-  } catch (error: unknown) {
-    clearTimeout(timeoutId);
-
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`${getActiveAiConfig(provider).displayName} request timed out (60s)`);
-    }
-
-    throw error;
   }
+
+  throw new AiGenerationError(
+    `${config.displayName} response reached the token limit before finishing after retry`,
+    `${config.displayName} atingiu o limite de resposta antes de finalizar. Tente gerar novamente ou reduza a complexidade.`,
+    'token_limit'
+  );
 }

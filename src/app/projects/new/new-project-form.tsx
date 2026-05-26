@@ -51,8 +51,13 @@ export function NewProjectForm({ defaultAiProvider }: { defaultAiProvider: AiPro
       });
 
       if (!res.ok) {
-        const errorBody = await res.json().catch(() => null);
-        throw new Error(errorBody?.error || "Falha ao gerar briefing");
+        const text = await res.clone().text().catch(() => "");
+        let errorMsg = `Erro ${res.status} ao gerar briefing`;
+        try {
+          const errorBody = JSON.parse(text);
+          errorMsg = errorBody?.error || errorMsg;
+        } catch { /* não é JSON, usa a mensagem padrão */ }
+        throw new Error(errorMsg);
       }
 
       const project = await res.json();
