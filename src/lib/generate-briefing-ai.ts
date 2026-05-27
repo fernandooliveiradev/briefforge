@@ -45,6 +45,56 @@ function cleanBaseUrl(value: string): string {
   return value.replace(/\/+$/, '');
 }
 
+function parseProviderErrorText(errorText: string): string {
+  try {
+    const parsed = JSON.parse(errorText) as {
+      error?: {
+        message?: unknown;
+        metadata?: {
+          raw?: unknown;
+          provider_name?: unknown;
+        };
+      };
+    };
+    const raw = parsed.error?.metadata?.raw;
+    const message = parsed.error?.message;
+
+    if (typeof raw === 'string' && raw.trim()) {
+      return raw.trim();
+    }
+
+    if (typeof message === 'string' && message.trim()) {
+      return message.trim();
+    }
+  } catch {
+    // Fall through to the plain text fallback.
+  }
+
+  return errorText.trim();
+}
+
+function getProviderRejectedMessage(config: AiProviderConfig, status: number, errorText: string): string {
+  const providerDetails = parseProviderErrorText(errorText);
+
+  if (status === 401 || status === 403) {
+    return `A chave do ${config.displayName} foi recusada. Verifique a API key configurada no .env.`;
+  }
+
+  if (status === 429) {
+    if (config.provider === 'openrouter') {
+      return `OpenRouter está temporariamente limitado para este modelo. Tente novamente mais tarde ou troque OPENROUTER_MODEL no .env. Detalhe: ${providerDetails}`;
+    }
+
+    return `${config.displayName} atingiu limite de uso ou rate limit. Tente novamente mais tarde.`;
+  }
+
+  if (status === 400 || status === 404) {
+    return `${config.displayName} recusou a geração. Verifique modelo e base URL no .env. Detalhe: ${providerDetails}`;
+  }
+
+  return `${config.displayName} recusou a geração. Detalhe: ${providerDetails || 'verifique chave, modelo, saldo e base URL.'}`;
+}
+
 export function getActiveAiProvider(providerOverride?: AiProvider): AiProvider {
   const provider = (providerOverride || process.env.AI_PROVIDER || 'openai').toLowerCase();
 
@@ -791,7 +841,7 @@ async function requestBriefingJson(config: AiProviderConfig, userMessage: string
       const errorText = await response.text();
       throw new AiGenerationError(
         `${config.displayName} API error ${response.status}: ${errorText}`,
-        `${config.displayName} recusou a geração. Verifique chave, modelo, saldo e base URL.`,
+        getProviderRejectedMessage(config, response.status, errorText),
         'provider_rejected'
       );
     }
