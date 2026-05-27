@@ -241,12 +241,12 @@ CRITICAL — every field below MUST exist and be non-empty:
   - quality_checks: string[] with 4-6 checks
 
 Return ONLY the JSON object. No markdown, no explanations.
-Keep the output complete but controlled. Do not write endlessly. Respect these size limits:
+Keep the output complete but compact. Do not write endlessly. Respect these size limits:
 - Arrays should usually have 3-5 items.
 - Normal descriptive strings should have 1-3 sentences.
-- Individual execution prompts should have 90-180 words.
-- logo_concept_board_prompt may have 180-280 words.
-- master_execution_prompt must be the longest field, but keep it between 450 and 750 words.
+- Individual execution prompts should have 60-120 words.
+- logo_concept_board_prompt may have 120-200 words.
+- master_execution_prompt must be the longest field, but keep it between 220 and 360 words.
 - Skills instructions should have 5-7 concise steps and quality_checks should have 4-5 concise checks.
 The master_execution_prompt MUST be long and actionable. It must consolidate details from EVERY tab/stage:
 - Briefing: client, segment, location, story, problem, business goal, audience, pains, desires
@@ -703,6 +703,20 @@ function validateDeliverablesStage(raw: any) {
   };
 }
 
+function validateCoreStage(raw: any) {
+  return {
+    ...validateBriefingStage(raw),
+    ...validateBrandStage(raw),
+  };
+}
+
+function validateProductionStage(raw: any) {
+  return {
+    ...validateMoodboardStage(raw),
+    ...validateDeliverablesStage(raw),
+  };
+}
+
 function listItems(values: string[] | undefined): string {
   return values?.filter(Boolean).join(', ') || 'n/a';
 }
@@ -730,7 +744,13 @@ function requiredContextLabel(language: string): string {
 }
 
 function appendExecutionContext(prompt: string, context: string, language: string): string {
-  return `${prompt.trim()}\n\n${requiredContextLabel(language)}:\n${context}`;
+  const compactContext = context
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(' ');
+
+  return `${prompt.trim()}\n\n${requiredContextLabel(language)}: ${compactContext}`;
 }
 
 function optionalString(val: any): string | undefined {
@@ -1323,7 +1343,7 @@ Retry instruction: return one raw JSON object only. No markdown, no commentary a
       return await requestBriefingJson(config, message, maxTokens, {
         systemPrompt: STAGED_SYSTEM_PROMPT,
         responseFormat: JSON_OBJECT_RESPONSE_FORMAT,
-        timeoutMs: Math.min(config.timeoutMs, 90_000),
+        timeoutMs: Math.min(config.timeoutMs, 75_000),
       });
     } catch (error) {
       const canRetry = error instanceof AiGenerationError
@@ -1343,15 +1363,8 @@ Retry instruction: return one raw JSON object only. No markdown, no commentary a
   );
 }
 
-function validatePromptsStage(raw: any, briefing: BriefingData, language: string) {
-  const rawPrompts = raw?.prompts && typeof raw.prompts === 'object' ? raw.prompts : raw;
-  return {
-    prompts: normalizePrompts(rawPrompts, briefing, language),
-  };
-}
-
-function buildBaseStageMessage(params: GenerateBriefingParams, langName: string, complexityInstruction: string): string {
-  return `Generate only the Briefing stage for a fictional brand project.
+function buildCoreStageMessage(params: GenerateBriefingParams, langName: string, complexityInstruction: string): string {
+  return `Generate the core strategy and visual identity for one fictional brand project.
 
 Parameters:
 - Business type: ${params.business_type}
@@ -1365,25 +1378,7 @@ ${complexityInstruction}
 Return exactly this JSON shape:
 {
   "client": { "name": "...", "segment": "...", "location": "...", "short_description": "...", "brand_story": "...", "main_problem": "...", "business_goal": "..." },
-  "audience": { "primary_audience": "...", "pain_points": ["..."], "desires": ["..."] }
-}
-
-Use a plausible location for the generated business. Do not default to São Paulo.`;
-}
-
-function buildBrandStageMessage(params: GenerateBriefingParams, langName: string, base: ReturnType<typeof validateBriefingStage>): string {
-  return `Generate only the Brand and Visual Identity stage.
-
-Language: ${langName}
-Business type: ${params.business_type}
-Visual style: ${params.visual_style}
-Project goal: ${params.project_goal}
-
-Source briefing:
-${JSON.stringify(base, null, 2)}
-
-Return exactly this JSON shape:
-{
+  "audience": { "primary_audience": "...", "pain_points": ["..."], "desires": ["..."] },
   "brand": { "personality": ["..."], "tone_of_voice": "...", "positioning": "...", "tagline": "..." },
   "visual_identity": {
     "logo_direction": "...",
@@ -1403,18 +1398,17 @@ Return exactly this JSON shape:
   }
 }
 
-The color_palette must have exactly 5 cohesive colors with valid hex values. Use Google Fonts and match the visual style.`;
+Rules: use exactly 5 colors with valid hex values, Google Fonts, 3-5 items per array, and a plausible location that is not São Paulo by default.`;
 }
 
-function buildMoodboardStageMessage(params: GenerateBriefingParams, langName: string, base: unknown, brand: unknown): string {
-  return `Generate only the Moodboard stage.
+function buildProductionStageMessage(params: GenerateBriefingParams, langName: string, core: unknown): string {
+  return `Generate moodboard and deliverables for this brand project.
 
 Language: ${langName}
-Visual style: ${params.visual_style}
 Project goal: ${params.project_goal}
 
-Source context:
-${JSON.stringify({ ...(base as object), ...(brand as object) }, null, 2)}
+Core context:
+${JSON.stringify(core, null, 2)}
 
 Return exactly this JSON shape:
 {
@@ -1424,60 +1418,12 @@ Return exactly this JSON shape:
     "photography_style": "...",
     "layout_style": "...",
     "texture_and_materials": ["..."]
-  }
-}
-
-Keep references concrete, coherent with the brand, and useful for production.`;
-}
-
-function buildDeliverablesStageMessage(params: GenerateBriefingParams, langName: string, context: unknown): string {
-  return `Generate only the Deliverables stage.
-
-Language: ${langName}
-Project goal: ${params.project_goal}
-
-Source context:
-${JSON.stringify(context, null, 2)}
-
-Return exactly this JSON shape:
-{
+  },
   "deliverables": ["..."],
   "portfolio_project_ideas": ["..."]
 }
 
-Deliverables must be practical and specific. Include relevant file formats, logo board assets, brand usage notes, prompt pack, and acceptance criteria when brand/logo work is relevant.`;
-}
-
-function buildPromptsStageMessage(langName: string, briefing: BriefingData): string {
-  return `Generate only the Prompts stage for this already validated briefing.
-
-Language: ${langName}
-
-Source briefing:
-${JSON.stringify({
-    client: briefing.client,
-    audience: briefing.audience,
-    brand: briefing.brand,
-    visual_identity: briefing.visual_identity,
-    moodboard: briefing.moodboard,
-    deliverables: briefing.deliverables,
-    portfolio_project_ideas: briefing.portfolio_project_ideas,
-  }, null, 2)}
-
-Return exactly this JSON shape:
-{
-  "prompts": {
-    "landing_page_prompt": "...",
-    "logo_prompt": "...",
-    "logo_concept_board_prompt": "...",
-    "moodboard_image_prompt": "...",
-    "social_media_prompt": "...",
-    "lovable_or_cursor_prompt": "...",
-    "master_execution_prompt": "..."
-  }
-}
-
-Each prompt must be self-contained and reuse the concrete brand details, including client name, audience, positioning, tagline, logo concept, symbol meanings, required variations, palette names and hex codes, typography, moodboard references and deliverables. Keep each prompt concise but production-ready.`;
+Rules: keep arrays to 3-5 practical items. Deliverables must include concrete formats, logo board assets, usage notes, prompt pack and acceptance criteria when relevant.`;
 }
 
 async function generateBriefingInStages(
@@ -1486,28 +1432,16 @@ async function generateBriefingInStages(
   langName: string,
   complexityInstruction: string
 ): Promise<BriefingData> {
-  const base = validateBriefingStage(
-    await requestStageJson(config, buildBaseStageMessage(params, langName, complexityInstruction), 2200)
+  const core = validateCoreStage(
+    await requestStageJson(config, buildCoreStageMessage(params, langName, complexityInstruction), 4200)
   );
-  const brand = validateBrandStage(
-    await requestStageJson(config, buildBrandStageMessage(params, langName, base), 3200)
-  );
-  const moodboard = validateMoodboardStage(
-    await requestStageJson(config, buildMoodboardStageMessage(params, langName, base, brand), 1800)
-  );
-  const deliverables = validateDeliverablesStage(
-    await requestStageJson(
-      config,
-      buildDeliverablesStageMessage(params, langName, { ...base, ...brand, ...moodboard }),
-      1800
-    )
+  const production = validateProductionStage(
+    await requestStageJson(config, buildProductionStageMessage(params, langName, core), 2600)
   );
 
   let briefing: BriefingData = {
-    ...base,
-    ...brand,
-    ...moodboard,
-    ...deliverables,
+    ...core,
+    ...production,
     prompts: {
       landing_page_prompt: '',
       logo_prompt: '',
@@ -1519,27 +1453,12 @@ async function generateBriefingInStages(
     },
     agent_skills: {} as BriefingData['agent_skills'],
   };
-  briefing = {
+
+  return enrichBriefingPrompts({
     ...briefing,
     prompts: buildDefaultPrompts(briefing, params.language),
     agent_skills: buildDefaultAgentSkills(briefing, params.language),
-  };
-
-  try {
-    const prompts = validatePromptsStage(
-      await requestStageJson(config, buildPromptsStageMessage(langName, briefing), 4200),
-      briefing,
-      params.language
-    );
-    briefing = {
-      ...briefing,
-      prompts: prompts.prompts,
-    };
-  } catch (error) {
-    console.warn('Falha ao gerar prompts por IA; usando fallback contextual:', error);
-  }
-
-  return enrichBriefingPrompts(briefing, params.language);
+  }, params.language);
 }
 
 export async function generateBriefingAI(params: GenerateBriefingParams): Promise<BriefingData> {
@@ -1604,12 +1523,12 @@ Write all textual content in ${langName}. Be creative and specific.`;
   }
 
   const attempts = [
-    { message: userMessage, maxTokens: 12000 },
+    { message: userMessage, maxTokens: 7500 },
     {
       message: `${userMessage}
 
-Compact retry instruction: the previous response was too long or not valid JSON. Return one raw JSON object only, with no markdown fences, no commentary and no text before or after the object. Keep every required field, but compress wording aggressively. Use 3 items for most arrays, 60-120 words for each execution prompt, 140-220 words for logo_concept_board_prompt, and 320-480 words for master_execution_prompt.`,
-      maxTokens: 9000,
+Compact retry instruction: the previous response was too long or not valid JSON. Return one raw JSON object only, with no markdown fences, no commentary and no text before or after the object. Keep every required field, but compress wording aggressively. Use 3 items for most arrays, 40-90 words for each execution prompt, 90-160 words for logo_concept_board_prompt, and 180-280 words for master_execution_prompt.`,
+      maxTokens: 5500,
     },
   ];
 
