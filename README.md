@@ -25,6 +25,7 @@ BriefForge is designed as a private creative operations tool: generate a fiction
 
 - Generate fictional clients by business type, visual style, project goal, language, and complexity.
 - Choose OpenAI/GPT, DeepSeek, or OpenRouter per briefing from the creation screen.
+- Generate new briefings in smaller AI stages instead of one huge request, reducing timeout and invalid JSON failures on slower/free models.
 - Produce structured brand, audience, visual identity, logo concept board, moodboard, prompts, production-ready deliverables, and agent skills.
 - Copy execution prompts for design, development, and content workflows.
 - Export briefings as Markdown or through a print-ready PDF view.

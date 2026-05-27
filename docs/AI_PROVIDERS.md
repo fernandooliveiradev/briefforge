@@ -57,6 +57,8 @@ You can override a single provider with `OPENAI_TIMEOUT_MS`, `DEEPSEEK_TIMEOUT_M
 ## Runtime Behavior
 
 - The selected provider is sent with the briefing creation request.
+- New briefings are generated in smaller stages: briefing, brand/visual identity, moodboard, deliverables and prompts. This reduces long single-response failures and makes free/slow models more reliable.
+- If the final prompts stage fails after the core briefing is generated, BriefForge falls back to contextual prompts derived from the validated briefing instead of discarding the project.
 - BriefForge saves the provider and model as `openai:model`, `deepseek:model`, or `openrouter:model` in the project record.
 - Stage regeneration follows the provider saved on that briefing.
 - If the selected provider has no API key or returns invalid data, the project or stage update is not persisted.

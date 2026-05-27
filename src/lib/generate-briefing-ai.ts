@@ -6,6 +6,17 @@ export type RegenerationStage = 'briefing' | 'brand' | 'moodboard' | 'prompts' |
 export const OPENAI_BRIEFING_MODEL = 'gpt-4o';
 export const DEEPSEEK_BRIEFING_MODEL = 'deepseek-v4-pro';
 
+interface GenerateBriefingParams {
+  business_type: string;
+  visual_style: string;
+  project_goal: string;
+  language: string;
+  complexity: string;
+  focusStage?: RegenerationStage;
+  provider?: AiProvider;
+  currentBriefing?: BriefingData;
+}
+
 interface AiProviderConfig {
   provider: AiProvider;
   displayName: string;
@@ -15,6 +26,12 @@ interface AiProviderConfig {
   responseFormat: unknown;
   headers?: Record<string, string>;
   timeoutMs: number;
+}
+
+interface AiRequestOptions {
+  systemPrompt?: string;
+  responseFormat?: unknown;
+  timeoutMs?: number;
 }
 
 export class AiGenerationError extends Error {
@@ -283,6 +300,14 @@ Make the brand feel like a real business, not generic placeholders.
 Vary the client location. Do not default to São Paulo, SP, Brazil. Choose a plausible city/state/country for the segment and language, including different Brazilian regions for Portuguese outputs and international locations for English outputs when appropriate. Use São Paulo only when it is specifically justified by the generated business context.
 Write ALL text in the requested language.`;
 
+const STAGED_SYSTEM_PROMPT = `You are a creative brand strategist generating one small part of a fictional brand briefing.
+
+Return ONLY a valid JSON object with exactly the fields requested by the user. No markdown, no code fences, no explanations and no text before or after JSON.
+Write all textual content in the requested language.
+Keep the output compact, specific and production-ready.
+Use concrete brand details, not placeholders.
+Vary the client location. Do not default to São Paulo, SP, Brazil unless specifically justified by the business context.`;
+
 const REGENERATION_STAGE_INSTRUCTIONS: Record<RegenerationStage, string> = {
   briefing:
     'Prioritize the Briefing tab: client, segment, location, story, main problem, business goal and audience. Keep all other tabs coherent with the regenerated briefing.',
@@ -336,6 +361,7 @@ const agentSkillSchema = {
     quality_checks: stringArrayField,
   },
 } as const;
+const JSON_OBJECT_RESPONSE_FORMAT = { type: 'json_object' } as const;
 
 const BRIEFING_RESPONSE_FORMAT = {
   type: 'json_schema',
@@ -615,6 +641,68 @@ function validateAgentSkill(val: any, path: string) {
   };
 }
 
+function validateBriefingStage(raw: any) {
+  return {
+    client: {
+      name: validateString(raw?.client?.name, 'client.name'),
+      segment: validateString(raw?.client?.segment, 'client.segment'),
+      location: validateString(raw?.client?.location, 'client.location'),
+      short_description: validateString(raw?.client?.short_description, 'client.short_description'),
+      brand_story: validateString(raw?.client?.brand_story, 'client.brand_story'),
+      main_problem: validateString(raw?.client?.main_problem, 'client.main_problem'),
+      business_goal: validateString(raw?.client?.business_goal, 'client.business_goal'),
+    },
+    audience: {
+      primary_audience: validateString(raw?.audience?.primary_audience, 'audience.primary_audience'),
+      pain_points: validateStringArray(raw?.audience?.pain_points, 'audience.pain_points'),
+      desires: validateStringArray(raw?.audience?.desires, 'audience.desires'),
+    },
+  };
+}
+
+function validateBrandStage(raw: any) {
+  return {
+    brand: {
+      personality: validateStringArray(raw?.brand?.personality, 'brand.personality'),
+      tone_of_voice: validateString(raw?.brand?.tone_of_voice, 'brand.tone_of_voice'),
+      positioning: validateString(raw?.brand?.positioning, 'brand.positioning'),
+      tagline: validateString(raw?.brand?.tagline, 'brand.tagline'),
+    },
+    visual_identity: {
+      logo_direction: validateString(raw?.visual_identity?.logo_direction, 'visual_identity.logo_direction'),
+      logo_concept_board: validateLogoConceptBoard(
+        raw?.visual_identity?.logo_concept_board,
+        'visual_identity.logo_concept_board'
+      ),
+      color_palette: validateColorPalette(raw?.visual_identity?.color_palette, 'visual_identity.color_palette'),
+      typography: {
+        heading: validateString(raw?.visual_identity?.typography?.heading, 'visual_identity.typography.heading'),
+        body: validateString(raw?.visual_identity?.typography?.body, 'visual_identity.typography.body'),
+        accent: validateString(raw?.visual_identity?.typography?.accent, 'visual_identity.typography.accent'),
+      },
+    },
+  };
+}
+
+function validateMoodboardStage(raw: any) {
+  return {
+    moodboard: {
+      keywords: validateStringArray(raw?.moodboard?.keywords, 'moodboard.keywords'),
+      visual_references: validateStringArray(raw?.moodboard?.visual_references, 'moodboard.visual_references'),
+      photography_style: validateString(raw?.moodboard?.photography_style, 'moodboard.photography_style'),
+      layout_style: validateString(raw?.moodboard?.layout_style, 'moodboard.layout_style'),
+      texture_and_materials: validateStringArray(raw?.moodboard?.texture_and_materials, 'moodboard.texture_and_materials'),
+    },
+  };
+}
+
+function validateDeliverablesStage(raw: any) {
+  return {
+    deliverables: validateStringArray(raw?.deliverables, 'deliverables'),
+    portfolio_project_ideas: validateStringArray(raw?.portfolio_project_ideas, 'portfolio_project_ideas'),
+  };
+}
+
 function listItems(values: string[] | undefined): string {
   return values?.filter(Boolean).join(', ') || 'n/a';
 }
@@ -792,6 +880,198 @@ function normalizePrompts(rawPrompts: any, briefing: BriefingData, language: str
   };
 }
 
+function buildDefaultAgentSkills(briefing: BriefingData, language: string): BriefingData['agent_skills'] {
+  const clientName = briefing.client.name;
+
+  if (language === 'ingles') {
+    return {
+      briefing: {
+        name: 'briefing-strategist',
+        description: `Use to refine the strategic briefing for ${clientName}.`,
+        when_to_use: 'Use when defining client context, audience, pains, desires and business objective.',
+        instructions: [
+          'Read the client segment, location, story, main problem and business goal.',
+          'Clarify the primary audience and the buying context.',
+          'Connect pain points and desires to the proposed positioning.',
+          'Preserve concrete details and remove generic claims.',
+          'Check that the briefing can guide brand, web and content work.',
+        ],
+        quality_checks: [
+          'Client context is specific.',
+          'Audience is actionable.',
+          'Problem and goal are connected.',
+          'No placeholder language remains.',
+        ],
+      },
+      brand: {
+        name: 'brand-identity-director',
+        description: `Use to direct the brand identity system for ${clientName}.`,
+        when_to_use: 'Use when creating or reviewing personality, tone, positioning, logo direction, palette and typography.',
+        instructions: [
+          'Start from positioning, tagline and brand personality.',
+          'Translate the logo direction into concrete symbol and composition choices.',
+          'Apply the palette and typography consistently across every asset.',
+          'Prepare primary, secondary, monochrome and emblem variations.',
+          'Verify legibility, contrast and premium presentation quality.',
+        ],
+        quality_checks: [
+          'Logo concept matches the positioning.',
+          'Palette has clear usage roles.',
+          'Typography hierarchy is usable.',
+          'Variations cover real production needs.',
+        ],
+      },
+      moodboard: {
+        name: 'moodboard-curator',
+        description: `Use to curate moodboard direction for ${clientName}.`,
+        when_to_use: 'Use when selecting visual references, photography style, layout language and materials.',
+        instructions: [
+          'Map keywords to concrete visual references.',
+          'Keep references coherent with the brand personality and palette.',
+          'Define photography, layout and materials with production language.',
+          'Avoid unrelated aesthetic references.',
+          'Use the moodboard to guide brand and interface execution.',
+        ],
+        quality_checks: [
+          'Keywords are visually clear.',
+          'References fit the segment.',
+          'Materials support the desired perception.',
+          'Moodboard can guide production.',
+        ],
+      },
+      prompts: {
+        name: 'prompt-production-lead',
+        description: `Use to prepare execution prompts for ${clientName}.`,
+        when_to_use: 'Use when sending the brand, landing page, moodboard or implementation brief to another AI tool.',
+        instructions: [
+          'Include the client name, audience, positioning and tagline.',
+          'Reuse palette names, hex codes, typography and symbol rationale.',
+          'Specify deliverables, format expectations and acceptance criteria.',
+          'Make each prompt self-contained.',
+          'Remove vague wording before copying to another tool.',
+        ],
+        quality_checks: [
+          'Prompt works without reading other tabs.',
+          'Brand details are included.',
+          'Output format is explicit.',
+          'Acceptance criteria are clear.',
+        ],
+      },
+      deliverables: {
+        name: 'deliverables-planner',
+        description: `Use to define production deliverables for ${clientName}.`,
+        when_to_use: 'Use when scoping final files, design boards, implementation assets and acceptance criteria.',
+        instructions: [
+          'List concrete files and formats.',
+          'Separate brand assets, web assets and prompt assets.',
+          'Include usage notes and minimum quality criteria.',
+          'Tie each deliverable to the project goal.',
+          'Keep scope practical for a portfolio-ready project.',
+        ],
+        quality_checks: [
+          'Deliverables are specific.',
+          'Formats are listed.',
+          'Acceptance criteria are testable.',
+          'Scope fits the project goal.',
+        ],
+      },
+    };
+  }
+
+  return {
+    briefing: {
+      name: 'estrategista-de-briefing',
+      description: `Use para refinar o briefing estratégico de ${clientName}.`,
+      when_to_use: 'Use ao definir contexto do cliente, público, dores, desejos e objetivo de negócio.',
+      instructions: [
+        'Leia segmento, localização, história, problema principal e objetivo de negócio.',
+        'Esclareça o público-alvo e o contexto de decisão.',
+        'Conecte dores e desejos ao posicionamento proposto.',
+        'Preserve detalhes concretos e remova afirmações genéricas.',
+        'Verifique se o briefing orienta marca, web e conteúdo.',
+      ],
+      quality_checks: [
+        'Contexto do cliente é específico.',
+        'Público é acionável.',
+        'Problema e objetivo estão conectados.',
+        'Não há linguagem de placeholder.',
+      ],
+    },
+    brand: {
+      name: 'diretor-de-identidade-de-marca',
+      description: `Use para dirigir o sistema de identidade visual de ${clientName}.`,
+      when_to_use: 'Use ao criar ou revisar personalidade, tom, posicionamento, logo, paleta e tipografia.',
+      instructions: [
+        'Comece pelo posicionamento, tagline e personalidade da marca.',
+        'Traduza a direção do logo em símbolos e composição concretos.',
+        'Aplique paleta e tipografia de forma consistente.',
+        'Prepare variações principal, secundária, monocromática e emblema.',
+        'Verifique legibilidade, contraste e apresentação premium.',
+      ],
+      quality_checks: [
+        'Conceito do logo combina com o posicionamento.',
+        'Paleta tem papéis claros de uso.',
+        'Hierarquia tipográfica é aplicável.',
+        'Variações cobrem necessidades reais.',
+      ],
+    },
+    moodboard: {
+      name: 'curador-de-moodboard',
+      description: `Use para curar a direção de moodboard de ${clientName}.`,
+      when_to_use: 'Use ao selecionar referências visuais, fotografia, linguagem de layout e materiais.',
+      instructions: [
+        'Conecte palavras-chave a referências visuais concretas.',
+        'Mantenha coerência com personalidade e paleta.',
+        'Defina fotografia, layout e materiais com linguagem de produção.',
+        'Evite referências estéticas desconectadas.',
+        'Use o moodboard para orientar marca e interface.',
+      ],
+      quality_checks: [
+        'Palavras-chave são visualmente claras.',
+        'Referências combinam com o segmento.',
+        'Materiais sustentam a percepção desejada.',
+        'Moodboard orienta produção.',
+      ],
+    },
+    prompts: {
+      name: 'lider-de-prompts-de-producao',
+      description: `Use para preparar prompts de execução para ${clientName}.`,
+      when_to_use: 'Use ao enviar marca, landing page, moodboard ou implementação para outra ferramenta de IA.',
+      instructions: [
+        'Inclua nome do cliente, público, posicionamento e tagline.',
+        'Reutilize paleta com hex, tipografia e justificativa simbólica.',
+        'Especifique entregáveis, formatos e critérios de aceitação.',
+        'Garanta que cada prompt seja autossuficiente.',
+        'Remova termos vagos antes de copiar para outra ferramenta.',
+      ],
+      quality_checks: [
+        'Prompt funciona sem ler outras abas.',
+        'Detalhes da marca estão incluídos.',
+        'Formato de saída é explícito.',
+        'Critérios de aceitação estão claros.',
+      ],
+    },
+    deliverables: {
+      name: 'planejador-de-entregaveis',
+      description: `Use para definir entregáveis de produção para ${clientName}.`,
+      when_to_use: 'Use ao escopar arquivos finais, pranchas, ativos de implementação e critérios de aceite.',
+      instructions: [
+        'Liste arquivos e formatos concretos.',
+        'Separe ativos de marca, web e prompts.',
+        'Inclua notas de uso e critérios mínimos de qualidade.',
+        'Conecte cada entregável ao objetivo do projeto.',
+        'Mantenha o escopo prático para portfólio.',
+      ],
+      quality_checks: [
+        'Entregáveis são específicos.',
+        'Formatos estão listados.',
+        'Critérios são testáveis.',
+        'Escopo combina com o objetivo.',
+      ],
+    },
+  };
+}
+
 function enrichBriefingPrompts(briefing: BriefingData, language: string): BriefingData {
   const brandContext = buildBrandContext(briefing, language);
   const briefingContext = buildBriefingContext(briefing, language);
@@ -940,20 +1220,26 @@ function validateBriefing(raw: any, language: string): BriefingData {
   };
 }
 
-async function requestBriefingJson(config: AiProviderConfig, userMessage: string, maxTokens: number): Promise<unknown> {
+async function requestBriefingJson(
+  config: AiProviderConfig,
+  userMessage: string,
+  maxTokens: number,
+  options: AiRequestOptions = {}
+): Promise<unknown> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs);
+  const timeoutMs = options.timeoutMs ?? config.timeoutMs;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const body: Record<string, unknown> = {
       model: config.model,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: options.systemPrompt || SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
       ],
       temperature: 0.75,
       max_tokens: maxTokens,
-      response_format: config.responseFormat,
+      response_format: options.responseFormat ?? config.responseFormat,
     };
 
     const response = await fetch(`${config.baseUrl}/chat/completions`, {
@@ -1012,7 +1298,7 @@ async function requestBriefingJson(config: AiProviderConfig, userMessage: string
     clearTimeout(timeoutId);
 
     if (error instanceof Error && error.name === 'AbortError') {
-      const timeoutSeconds = Math.round(config.timeoutMs / 1000);
+      const timeoutSeconds = Math.round(timeoutMs / 1000);
       throw new AiGenerationError(
         `${config.displayName} request timed out (${timeoutSeconds}s)`,
         `${config.displayName} demorou demais para responder (${timeoutSeconds}s). Tente novamente ou use uma complexidade menor.`,
@@ -1024,16 +1310,239 @@ async function requestBriefingJson(config: AiProviderConfig, userMessage: string
   }
 }
 
-export async function generateBriefingAI(params: {
-  business_type: string;
-  visual_style: string;
-  project_goal: string;
-  language: string;
-  complexity: string;
-  focusStage?: RegenerationStage;
-  provider?: AiProvider;
-  currentBriefing?: BriefingData;
-}): Promise<BriefingData> {
+async function requestStageJson(config: AiProviderConfig, userMessage: string, maxTokens: number): Promise<unknown> {
+  const attempts = [
+    userMessage,
+    `${userMessage}
+
+Retry instruction: return one raw JSON object only. No markdown, no commentary and no text before or after JSON. Keep arrays to 3-5 concise items and strings compact.`,
+  ];
+
+  for (const [index, message] of attempts.entries()) {
+    try {
+      return await requestBriefingJson(config, message, maxTokens, {
+        systemPrompt: STAGED_SYSTEM_PROMPT,
+        responseFormat: JSON_OBJECT_RESPONSE_FORMAT,
+        timeoutMs: Math.min(config.timeoutMs, 90_000),
+      });
+    } catch (error) {
+      const canRetry = error instanceof AiGenerationError
+        && ['token_limit', 'invalid_json', 'empty_response', 'timeout'].includes(error.code)
+        && index === 0;
+
+      if (!canRetry) {
+        throw error;
+      }
+    }
+  }
+
+  throw new AiGenerationError(
+    `${config.displayName} could not generate the requested stage`,
+    `${config.displayName} não conseguiu gerar esta etapa. Tente novamente.`,
+    'stage_generation_failed'
+  );
+}
+
+function validatePromptsStage(raw: any, briefing: BriefingData, language: string) {
+  const rawPrompts = raw?.prompts && typeof raw.prompts === 'object' ? raw.prompts : raw;
+  return {
+    prompts: normalizePrompts(rawPrompts, briefing, language),
+  };
+}
+
+function buildBaseStageMessage(params: GenerateBriefingParams, langName: string, complexityInstruction: string): string {
+  return `Generate only the Briefing stage for a fictional brand project.
+
+Parameters:
+- Business type: ${params.business_type}
+- Visual style: ${params.visual_style}
+- Project goal: ${params.project_goal}
+- Language: ${langName}
+- Complexity: ${params.complexity}
+
+${complexityInstruction}
+
+Return exactly this JSON shape:
+{
+  "client": { "name": "...", "segment": "...", "location": "...", "short_description": "...", "brand_story": "...", "main_problem": "...", "business_goal": "..." },
+  "audience": { "primary_audience": "...", "pain_points": ["..."], "desires": ["..."] }
+}
+
+Use a plausible location for the generated business. Do not default to São Paulo.`;
+}
+
+function buildBrandStageMessage(params: GenerateBriefingParams, langName: string, base: ReturnType<typeof validateBriefingStage>): string {
+  return `Generate only the Brand and Visual Identity stage.
+
+Language: ${langName}
+Business type: ${params.business_type}
+Visual style: ${params.visual_style}
+Project goal: ${params.project_goal}
+
+Source briefing:
+${JSON.stringify(base, null, 2)}
+
+Return exactly this JSON shape:
+{
+  "brand": { "personality": ["..."], "tone_of_voice": "...", "positioning": "...", "tagline": "..." },
+  "visual_identity": {
+    "logo_direction": "...",
+    "logo_concept_board": {
+      "concept_name": "...",
+      "logo_type": "...",
+      "composition": "...",
+      "symbol_meaning": ["..."],
+      "required_variations": ["logo principal", "emblema/símbolo", "versão secundária", "versão monocromática"],
+      "board_sections": ["..."],
+      "production_notes": ["..."]
+    },
+    "color_palette": [
+      { "name": "...", "hex": "#000000", "usage": "..." }
+    ],
+    "typography": { "heading": "...", "body": "...", "accent": "..." }
+  }
+}
+
+The color_palette must have exactly 5 cohesive colors with valid hex values. Use Google Fonts and match the visual style.`;
+}
+
+function buildMoodboardStageMessage(params: GenerateBriefingParams, langName: string, base: unknown, brand: unknown): string {
+  return `Generate only the Moodboard stage.
+
+Language: ${langName}
+Visual style: ${params.visual_style}
+Project goal: ${params.project_goal}
+
+Source context:
+${JSON.stringify({ ...(base as object), ...(brand as object) }, null, 2)}
+
+Return exactly this JSON shape:
+{
+  "moodboard": {
+    "keywords": ["..."],
+    "visual_references": ["..."],
+    "photography_style": "...",
+    "layout_style": "...",
+    "texture_and_materials": ["..."]
+  }
+}
+
+Keep references concrete, coherent with the brand, and useful for production.`;
+}
+
+function buildDeliverablesStageMessage(params: GenerateBriefingParams, langName: string, context: unknown): string {
+  return `Generate only the Deliverables stage.
+
+Language: ${langName}
+Project goal: ${params.project_goal}
+
+Source context:
+${JSON.stringify(context, null, 2)}
+
+Return exactly this JSON shape:
+{
+  "deliverables": ["..."],
+  "portfolio_project_ideas": ["..."]
+}
+
+Deliverables must be practical and specific. Include relevant file formats, logo board assets, brand usage notes, prompt pack, and acceptance criteria when brand/logo work is relevant.`;
+}
+
+function buildPromptsStageMessage(langName: string, briefing: BriefingData): string {
+  return `Generate only the Prompts stage for this already validated briefing.
+
+Language: ${langName}
+
+Source briefing:
+${JSON.stringify({
+    client: briefing.client,
+    audience: briefing.audience,
+    brand: briefing.brand,
+    visual_identity: briefing.visual_identity,
+    moodboard: briefing.moodboard,
+    deliverables: briefing.deliverables,
+    portfolio_project_ideas: briefing.portfolio_project_ideas,
+  }, null, 2)}
+
+Return exactly this JSON shape:
+{
+  "prompts": {
+    "landing_page_prompt": "...",
+    "logo_prompt": "...",
+    "logo_concept_board_prompt": "...",
+    "moodboard_image_prompt": "...",
+    "social_media_prompt": "...",
+    "lovable_or_cursor_prompt": "...",
+    "master_execution_prompt": "..."
+  }
+}
+
+Each prompt must be self-contained and reuse the concrete brand details, including client name, audience, positioning, tagline, logo concept, symbol meanings, required variations, palette names and hex codes, typography, moodboard references and deliverables. Keep each prompt concise but production-ready.`;
+}
+
+async function generateBriefingInStages(
+  params: GenerateBriefingParams,
+  config: AiProviderConfig,
+  langName: string,
+  complexityInstruction: string
+): Promise<BriefingData> {
+  const base = validateBriefingStage(
+    await requestStageJson(config, buildBaseStageMessage(params, langName, complexityInstruction), 2200)
+  );
+  const brand = validateBrandStage(
+    await requestStageJson(config, buildBrandStageMessage(params, langName, base), 3200)
+  );
+  const moodboard = validateMoodboardStage(
+    await requestStageJson(config, buildMoodboardStageMessage(params, langName, base, brand), 1800)
+  );
+  const deliverables = validateDeliverablesStage(
+    await requestStageJson(
+      config,
+      buildDeliverablesStageMessage(params, langName, { ...base, ...brand, ...moodboard }),
+      1800
+    )
+  );
+
+  let briefing: BriefingData = {
+    ...base,
+    ...brand,
+    ...moodboard,
+    ...deliverables,
+    prompts: {
+      landing_page_prompt: '',
+      logo_prompt: '',
+      logo_concept_board_prompt: '',
+      moodboard_image_prompt: '',
+      social_media_prompt: '',
+      lovable_or_cursor_prompt: '',
+      master_execution_prompt: '',
+    },
+    agent_skills: {} as BriefingData['agent_skills'],
+  };
+  briefing = {
+    ...briefing,
+    prompts: buildDefaultPrompts(briefing, params.language),
+    agent_skills: buildDefaultAgentSkills(briefing, params.language),
+  };
+
+  try {
+    const prompts = validatePromptsStage(
+      await requestStageJson(config, buildPromptsStageMessage(langName, briefing), 4200),
+      briefing,
+      params.language
+    );
+    briefing = {
+      ...briefing,
+      prompts: prompts.prompts,
+    };
+  } catch (error) {
+    console.warn('Falha ao gerar prompts por IA; usando fallback contextual:', error);
+  }
+
+  return enrichBriefingPrompts(briefing, params.language);
+}
+
+export async function generateBriefingAI(params: GenerateBriefingParams): Promise<BriefingData> {
   const {
     business_type,
     visual_style,
@@ -1088,6 +1597,10 @@ Write all textual content in ${langName}. Be creative and specific.`;
       `O modelo do ${config.displayName} não está configurado. Defina OPENROUTER_MODEL no .env.`,
       'missing_model'
     );
+  }
+
+  if (!focusStage && !currentBriefing) {
+    return generateBriefingInStages(params, config, langName, complexityInstruction);
   }
 
   const attempts = [
