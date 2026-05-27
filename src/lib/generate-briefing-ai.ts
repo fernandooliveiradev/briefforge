@@ -570,6 +570,15 @@ function appendExecutionContext(prompt: string, context: string, language: strin
   return `${prompt.trim()}\n\n${requiredContextLabel(language)}:\n${context}`;
 }
 
+function optionalString(val: any): string | undefined {
+  if (typeof val !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = val.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 function buildBrandContext(briefing: BriefingData, language: string): string {
   const { client, brand, visual_identity } = briefing;
   const board = visual_identity.logo_concept_board;
@@ -663,6 +672,51 @@ function buildDeliverablesContext(briefing: BriefingData, language: string): str
   ].join('\n');
 }
 
+function buildDefaultPrompts(briefing: BriefingData, language: string): BriefingData['prompts'] {
+  const { client, brand, visual_identity, moodboard } = briefing;
+  const board = visual_identity.logo_concept_board;
+  const boardSections = listItems(board?.board_sections);
+  const variations = listItems(board?.required_variations);
+  const palette = paletteSummary(briefing);
+  const typography = typographySummary(briefing, language);
+
+  if (language === 'ingles') {
+    return {
+      landing_page_prompt: `Create a premium landing page for ${client.name}, focused on ${brand.positioning}. Use the tagline "${brand.tagline}", a ${brand.tone_of_voice} voice, the defined palette (${palette}) and typography (${typography}). Include a strong hero, proof points, service/value sections, audience pains and desires, conversion CTA, and polished responsive layout.`,
+      logo_prompt: `Design the primary logo for ${client.name}. Follow this direction: ${visual_identity.logo_direction}. Use a ${board?.logo_type || 'refined wordmark'} approach with subtle symbols for ${listItems(board?.symbol_meaning)}. Keep it elegant, legible at small sizes, premium, modern, and consistent with the palette ${palette}.`,
+      logo_concept_board_prompt: `Create a complete visual identity board for ${client.name}. Include primary logo, emblem/symbol, secondary version, monochrome version, color variations, palette with names and hex values, typography samples, usage guide, and symbol rationale. Use sections: ${boardSections}. Required variations: ${variations}. Present everything in a premium neutral layout.`,
+      moodboard_image_prompt: `Generate a premium moodboard for ${client.name} using the keywords ${listItems(moodboard.keywords)}. Combine ${listItems(moodboard.visual_references)}, ${moodboard.photography_style}, ${moodboard.layout_style}, and materials such as ${listItems(moodboard.texture_and_materials)}. Keep the composition refined, coherent, and brand-ready.`,
+      social_media_prompt: `Create a social media creative system for ${client.name}. Use the brand personality ${listItems(brand.personality)}, the positioning "${brand.positioning}", the tagline "${brand.tagline}", the palette ${palette}, and clear layouts for awareness, authority, offer and testimonial posts.`,
+      lovable_or_cursor_prompt: `Build a polished web implementation for ${client.name}. Translate the briefing, brand positioning, visual identity, moodboard and deliverables into a responsive interface with reusable sections, refined typography, strong CTAs, accessible contrast, and production-quality spacing.`,
+      master_execution_prompt: `For ${client.name}, execute the full brand and digital presentation package. Preserve the business goal "${client.business_goal}", solve "${client.main_problem}", speak to ${briefing.audience.primary_audience}, and express the brand as ${listItems(brand.personality)} with a ${brand.tone_of_voice} voice. Deliver the landing page direction, logo system, visual identity board, moodboard, social media system, and implementation prompt with consistency across palette, typography, symbols and use cases.`,
+    };
+  }
+
+  return {
+    landing_page_prompt: `Crie uma landing page premium para ${client.name}, focada em ${brand.positioning}. Use a tagline "${brand.tagline}", tom ${brand.tone_of_voice}, a paleta definida (${palette}) e a tipografia (${typography}). Inclua hero forte, provas de autoridade, seções de serviço/valor, dores e desejos do público, CTA de conversão e layout responsivo refinado.`,
+    logo_prompt: `Desenvolva o logo principal para ${client.name}. Siga esta direção: ${visual_identity.logo_direction}. Use uma abordagem de ${board?.logo_type || 'wordmark refinado'} com símbolos sutis para ${listItems(board?.symbol_meaning)}. Mantenha elegância, legibilidade em tamanhos reduzidos, aparência premium, moderna e consistente com a paleta ${palette}.`,
+    logo_concept_board_prompt: `Crie uma prancha completa de identidade visual para ${client.name}. Inclua logo principal, emblema/símbolo, versão secundária, versão monocromática, variações de cor, paleta com nomes e hex, amostras tipográficas, guia de uso e justificativa dos símbolos. Use as seções: ${boardSections}. Variações obrigatórias: ${variations}. Apresente tudo em layout premium com fundo neutro.`,
+    moodboard_image_prompt: `Gere um moodboard premium para ${client.name} usando as palavras-chave ${listItems(moodboard.keywords)}. Combine ${listItems(moodboard.visual_references)}, ${moodboard.photography_style}, ${moodboard.layout_style} e materiais como ${listItems(moodboard.texture_and_materials)}. Mantenha composição refinada, coerente e pronta para guiar a marca.`,
+    social_media_prompt: `Crie um sistema de peças para redes sociais de ${client.name}. Use a personalidade ${listItems(brand.personality)}, o posicionamento "${brand.positioning}", a tagline "${brand.tagline}", a paleta ${palette} e layouts claros para awareness, autoridade, oferta e depoimentos.`,
+    lovable_or_cursor_prompt: `Construa uma implementação web refinada para ${client.name}. Traduza briefing, posicionamento, identidade visual, moodboard e entregáveis em uma interface responsiva com seções reutilizáveis, tipografia premium, CTAs fortes, contraste acessível e espaçamento de qualidade de produção.`,
+    master_execution_prompt: `Para ${client.name}, execute o pacote completo de marca e apresentação digital. Preserve o objetivo de negócio "${client.business_goal}", resolva "${client.main_problem}", fale com ${briefing.audience.primary_audience} e expresse a marca como ${listItems(brand.personality)} em tom ${brand.tone_of_voice}. Entregue direção de landing page, sistema de logo, prancha de identidade visual, moodboard, sistema de redes sociais e prompt de implementação com consistência entre paleta, tipografia, símbolos e aplicações.`,
+  };
+}
+
+function normalizePrompts(rawPrompts: any, briefing: BriefingData, language: string): BriefingData['prompts'] {
+  const defaults = buildDefaultPrompts(briefing, language);
+
+  return {
+    landing_page_prompt: optionalString(rawPrompts?.landing_page_prompt) || defaults.landing_page_prompt,
+    logo_prompt: optionalString(rawPrompts?.logo_prompt) || defaults.logo_prompt,
+    logo_concept_board_prompt: optionalString(rawPrompts?.logo_concept_board_prompt) || defaults.logo_concept_board_prompt,
+    moodboard_image_prompt: optionalString(rawPrompts?.moodboard_image_prompt) || defaults.moodboard_image_prompt,
+    social_media_prompt: optionalString(rawPrompts?.social_media_prompt) || defaults.social_media_prompt,
+    lovable_or_cursor_prompt: optionalString(rawPrompts?.lovable_or_cursor_prompt) || defaults.lovable_or_cursor_prompt,
+    master_execution_prompt: optionalString(rawPrompts?.master_execution_prompt) || defaults.master_execution_prompt,
+  };
+}
+
 function enrichBriefingPrompts(briefing: BriefingData, language: string): BriefingData {
   const brandContext = buildBrandContext(briefing, language);
   const briefingContext = buildBriefingContext(briefing, language);
@@ -743,8 +797,8 @@ function buildExistingBriefingInstruction(briefing: BriefingData, language: stri
   return `\nContexto existente do briefing para preservar como fonte da verdade ao regenerar prompts:\n${context}\n`;
 }
 
-function validateBriefing(raw: any): BriefingData {
-  return {
+function validateBriefing(raw: any, language: string): BriefingData {
+  const briefing: BriefingData = {
     client: {
       name: validateString(raw?.client?.name, 'client.name'),
       segment: validateString(raw?.client?.segment, 'client.segment'),
@@ -788,16 +842,13 @@ function validateBriefing(raw: any): BriefingData {
     deliverables: validateStringArray(raw?.deliverables, 'deliverables'),
     portfolio_project_ideas: validateStringArray(raw?.portfolio_project_ideas, 'portfolio_project_ideas'),
     prompts: {
-      landing_page_prompt: validateString(raw?.prompts?.landing_page_prompt, 'prompts.landing_page_prompt'),
-      logo_prompt: validateString(raw?.prompts?.logo_prompt, 'prompts.logo_prompt'),
-      logo_concept_board_prompt: validateString(
-        raw?.prompts?.logo_concept_board_prompt,
-        'prompts.logo_concept_board_prompt'
-      ),
-      moodboard_image_prompt: validateString(raw?.prompts?.moodboard_image_prompt, 'prompts.moodboard_image_prompt'),
-      social_media_prompt: validateString(raw?.prompts?.social_media_prompt, 'prompts.social_media_prompt'),
-      lovable_or_cursor_prompt: validateString(raw?.prompts?.lovable_or_cursor_prompt, 'prompts.lovable_or_cursor_prompt'),
-      master_execution_prompt: validateString(raw?.prompts?.master_execution_prompt, 'prompts.master_execution_prompt'),
+      landing_page_prompt: '',
+      logo_prompt: '',
+      logo_concept_board_prompt: '',
+      moodboard_image_prompt: '',
+      social_media_prompt: '',
+      lovable_or_cursor_prompt: '',
+      master_execution_prompt: '',
     },
     agent_skills: {
       briefing: validateAgentSkill(raw?.agent_skills?.briefing, 'agent_skills.briefing'),
@@ -806,6 +857,11 @@ function validateBriefing(raw: any): BriefingData {
       prompts: validateAgentSkill(raw?.agent_skills?.prompts, 'agent_skills.prompts'),
       deliverables: validateAgentSkill(raw?.agent_skills?.deliverables, 'agent_skills.deliverables'),
     },
+  };
+
+  return {
+    ...briefing,
+    prompts: normalizePrompts(raw?.prompts, briefing, language),
   };
 }
 
@@ -971,7 +1027,7 @@ Compact retry instruction: the previous response may be too long for this model.
 
   for (const [index, attempt] of attempts.entries()) {
     try {
-      const validated = validateBriefing(await requestBriefingJson(config, attempt.message, attempt.maxTokens));
+      const validated = validateBriefing(await requestBriefingJson(config, attempt.message, attempt.maxTokens), language);
       return applyPromptContext(validated, currentBriefing ?? validated, language);
     } catch (error) {
       const canRetry = error instanceof AiGenerationError && error.code === 'token_limit' && index === 0;
