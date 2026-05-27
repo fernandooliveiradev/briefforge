@@ -24,6 +24,8 @@ BriefForge is local-first software. It can run on a private machine, a small VPS
 | `OPENROUTER_BASE_URL` | No | Defaults to `https://openrouter.ai/api/v1`. |
 | `OPENROUTER_SITE_URL` | No | Optional OpenRouter app attribution URL. |
 | `OPENROUTER_APP_NAME` | No | Optional OpenRouter app attribution title. |
+| `AI_REQUEST_TIMEOUT_MS` | No | Generation timeout in milliseconds. Defaults to `120000`. |
+| `OPENAI_TIMEOUT_MS` / `DEEPSEEK_TIMEOUT_MS` / `OPENROUTER_TIMEOUT_MS` | No | Provider-specific timeout override in milliseconds. |
 | `BRIEFFORGE_ACCESS_PASSWORD` | Recommended in production | Enables the private access gate. |
 | `BRIEFFORGE_SESSION_SECRET` | Recommended in production | Separate random secret for signed sessions. |
 | `NEXT_DIST_DIR` | No | Optional build output directory override. |

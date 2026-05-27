@@ -118,6 +118,8 @@ Open http://localhost:3000.
 | `OPENROUTER_BASE_URL` | No | OpenRouter OpenAI-compatible base URL. Defaults to `https://openrouter.ai/api/v1`. |
 | `OPENROUTER_SITE_URL` | No | Optional app attribution URL sent to OpenRouter as `HTTP-Referer`. |
 | `OPENROUTER_APP_NAME` | No | Optional app attribution title sent to OpenRouter. Defaults to `BriefForge`. |
+| `AI_REQUEST_TIMEOUT_MS` | No | Generation timeout in milliseconds. Defaults to `120000`. |
+| `OPENAI_TIMEOUT_MS` / `DEEPSEEK_TIMEOUT_MS` / `OPENROUTER_TIMEOUT_MS` | No | Provider-specific timeout override in milliseconds. |
 | `BRIEFFORGE_ACCESS_PASSWORD` | No | Optional password gate for private routes and project APIs. Recommended for any deployed instance. |
 | `BRIEFFORGE_SESSION_SECRET` | No | Optional extra secret used to derive the access cookie. Recommended when access control is enabled. |
 

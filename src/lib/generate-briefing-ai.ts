@@ -45,6 +45,18 @@ function cleanBaseUrl(value: string): string {
   return value.replace(/\/+$/, '');
 }
 
+function getAiTimeoutMs(provider: AiProvider, fallbackMs: number): number {
+  const specificEnvName = `${provider.toUpperCase()}_TIMEOUT_MS`;
+  const raw = process.env[specificEnvName] || process.env.AI_REQUEST_TIMEOUT_MS;
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+
+  if (Number.isFinite(parsed) && parsed >= 15_000) {
+    return parsed;
+  }
+
+  return fallbackMs;
+}
+
 function parseProviderErrorText(errorText: string): string {
   try {
     const parsed = JSON.parse(errorText) as {
@@ -124,7 +136,7 @@ export function getActiveAiConfig(providerOverride?: AiProvider): AiProviderConf
         ...(referer ? { 'HTTP-Referer': referer } : {}),
         'X-OpenRouter-Title': title,
       },
-      timeoutMs: 300_000,
+      timeoutMs: getAiTimeoutMs(provider, 120_000),
     };
   }
 
@@ -136,7 +148,7 @@ export function getActiveAiConfig(providerOverride?: AiProvider): AiProviderConf
       baseUrl: cleanBaseUrl(process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com'),
       model: process.env.DEEPSEEK_MODEL || DEEPSEEK_BRIEFING_MODEL,
       responseFormat: { type: 'json_object' },
-      timeoutMs: 240_000,
+      timeoutMs: getAiTimeoutMs(provider, 120_000),
     };
   }
 
@@ -147,7 +159,7 @@ export function getActiveAiConfig(providerOverride?: AiProvider): AiProviderConf
     baseUrl: cleanBaseUrl(process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'),
     model: process.env.OPENAI_MODEL || OPENAI_BRIEFING_MODEL,
     responseFormat: BRIEFING_RESPONSE_FORMAT,
-    timeoutMs: 240_000,
+    timeoutMs: getAiTimeoutMs(provider, 120_000),
   };
 }
 
@@ -472,6 +484,69 @@ function validateString(val: any, path: string): string {
     throw new Error(`AI response missing or invalid field: ${path}`);
   }
   return val.trim();
+}
+
+function extractJsonObject(content: string): unknown {
+  const trimmed = content.trim();
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    // Some providers ignore JSON mode and wrap the object in prose or ```json fences.
+  }
+
+  const fenceMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenceMatch?.[1]) {
+    try {
+      return JSON.parse(fenceMatch[1].trim());
+    } catch {
+      // Fall through to balanced-object extraction.
+    }
+  }
+
+  const start = trimmed.indexOf('{');
+  if (start === -1) {
+    throw new Error('No JSON object found');
+  }
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = start; index < trimmed.length; index += 1) {
+    const char = trimmed[index];
+
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+
+    if (char === '\\') {
+      escaped = inString;
+      continue;
+    }
+
+    if (char === '"') {
+      inString = !inString;
+      continue;
+    }
+
+    if (inString) {
+      continue;
+    }
+
+    if (char === '{') {
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+
+      if (depth === 0) {
+        return JSON.parse(trimmed.slice(start, index + 1));
+      }
+    }
+  }
+
+  throw new Error('Incomplete JSON object');
 }
 
 function validateStringArray(val: any, path: string): string[] {
@@ -925,7 +1000,7 @@ async function requestBriefingJson(config: AiProviderConfig, userMessage: string
     }
 
     try {
-      return JSON.parse(content);
+      return extractJsonObject(content);
     } catch {
       throw new AiGenerationError(
         `${config.displayName} returned invalid JSON`,
@@ -1020,7 +1095,7 @@ Write all textual content in ${langName}. Be creative and specific.`;
     {
       message: `${userMessage}
 
-Compact retry instruction: the previous response may be too long for this model. Keep every required field, but compress wording aggressively. Use 3 items for most arrays, 60-120 words for each execution prompt, 140-220 words for logo_concept_board_prompt, and 320-480 words for master_execution_prompt. Return one valid JSON object only.`,
+Compact retry instruction: the previous response was too long or not valid JSON. Return one raw JSON object only, with no markdown fences, no commentary and no text before or after the object. Keep every required field, but compress wording aggressively. Use 3 items for most arrays, 60-120 words for each execution prompt, 140-220 words for logo_concept_board_prompt, and 320-480 words for master_execution_prompt.`,
       maxTokens: 9000,
     },
   ];
@@ -1030,7 +1105,9 @@ Compact retry instruction: the previous response may be too long for this model.
       const validated = validateBriefing(await requestBriefingJson(config, attempt.message, attempt.maxTokens), language);
       return applyPromptContext(validated, currentBriefing ?? validated, language);
     } catch (error) {
-      const canRetry = error instanceof AiGenerationError && error.code === 'token_limit' && index === 0;
+      const canRetry = error instanceof AiGenerationError
+        && ['token_limit', 'invalid_json', 'empty_response'].includes(error.code)
+        && index === 0;
       if (!canRetry) {
         throw error;
       }

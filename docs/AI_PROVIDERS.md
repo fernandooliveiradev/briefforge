@@ -44,6 +44,16 @@ BriefForge does not hardcode the OpenRouter model. It sends exactly the model sl
 
 To make multiple options available, configure each matching key: `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, and/or `OPENROUTER_API_KEY`. After changing provider variables, restart the Next.js server.
 
+## Timeouts
+
+Generation defaults to a 120 second timeout so a slow provider does not leave the UI waiting indefinitely.
+
+```env
+AI_REQUEST_TIMEOUT_MS=120000
+```
+
+You can override a single provider with `OPENAI_TIMEOUT_MS`, `DEEPSEEK_TIMEOUT_MS`, or `OPENROUTER_TIMEOUT_MS`. Values must be in milliseconds and at least `15000`.
+
 ## Runtime Behavior
 
 - The selected provider is sent with the briefing creation request.
