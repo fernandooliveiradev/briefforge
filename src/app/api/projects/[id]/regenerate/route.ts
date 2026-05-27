@@ -145,6 +145,7 @@ export async function POST(
       complexity: row.complexity,
       focusStage: stage,
       provider,
+      currentBriefing: stage === 'prompts' ? current : undefined,
     });
     const merged = mergeStage(current, regenerated, stage);
     const updated = updateProjectBriefing(projectId, JSON.stringify(merged), getActiveAiModelLabel(provider));

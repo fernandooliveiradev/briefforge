@@ -151,7 +151,13 @@ The master_execution_prompt MUST be long and actionable. It must consolidate det
 - Prompts: specific instructions for landing page, logo, moodboard image, social media and Lovable/Cursor
 - Deliverables: exact deliverables, brand board assets, logo variations, file formats, acceptance criteria and production notes
 The master_execution_prompt should tell an implementation/design agent what to build, what to avoid, and how to verify the output.
+Every execution prompt MUST be self-contained. A user must be able to copy only that prompt into another AI/design tool and still get an output coherent with the generated Briefing, Marca, Moodboard and Entregáveis tabs.
+Do not write generic prompts. Prompts must reuse the concrete generated brand content: client name, segment, audience, personality, tone, positioning, tagline, logo direction, logo concept board, symbol meanings, required variations, color palette with names and hex codes, typography names and roles, moodboard references, deliverables and acceptance criteria.
 The logo_prompt and logo_concept_board_prompt MUST be strong enough to paste into an image/design AI and get a complete logo presentation document, not only an isolated icon. Ask for a "prancha de identidade visual / brand board / logo concept board" with:
+- exact client/brand name
+- brand personality, tone of voice, positioning and tagline
+- logo direction, concept name, logo type and composition
+- symbol meanings and visual metaphors
 - logo principal
 - emblem or symbol
 - monogram when useful
@@ -160,7 +166,10 @@ The logo_prompt and logo_concept_board_prompt MUST be strong enough to paste int
 - typography samples
 - symbol rationale
 - spacing/alignment notes
+- production notes and usage constraints
 - premium presentation layout on an off-white or neutral background when the style fits
+The moodboard_image_prompt MUST reuse the generated moodboard keywords, visual references, photography style, layout style, textures/materials, brand personality and color palette.
+The landing_page_prompt, social_media_prompt and lovable_or_cursor_prompt MUST reuse the generated client problem, business goal, audience, brand tone, tagline, palette, typography and deliverables. They should not be generic one-paragraph prompts.
 Deliverables MUST be practical and specific. Avoid generic items like "logo" or "social media". Prefer outputs such as:
 - Prancha de identidade visual / brand board in PNG and PDF
 - Logo principal in SVG, PNG transparent and PDF
@@ -455,6 +464,209 @@ function validateAgentSkill(val: any, path: string) {
   };
 }
 
+function listItems(values: string[] | undefined): string {
+  return values?.filter(Boolean).join(', ') || 'n/a';
+}
+
+function paletteSummary(briefing: BriefingData): string {
+  return briefing.visual_identity.color_palette
+    .map((color) => `${color.name} ${color.hex} (${color.usage})`)
+    .join('; ');
+}
+
+function typographySummary(briefing: BriefingData, language: string): string {
+  const { typography } = briefing.visual_identity;
+
+  if (language === 'ingles') {
+    return `${typography.heading} for headings; ${typography.body} for body copy; ${typography.accent} for supporting/accent text.`;
+  }
+
+  return `${typography.heading} para títulos; ${typography.body} para corpo; ${typography.accent} para apoio/acento.`;
+}
+
+function requiredContextLabel(language: string): string {
+  return language === 'ingles'
+    ? 'Required execution context'
+    : 'Contexto obrigatório para execução';
+}
+
+function appendExecutionContext(prompt: string, context: string, language: string): string {
+  return `${prompt.trim()}\n\n${requiredContextLabel(language)}:\n${context}`;
+}
+
+function buildBrandContext(briefing: BriefingData, language: string): string {
+  const { client, brand, visual_identity } = briefing;
+  const board = visual_identity.logo_concept_board;
+
+  if (language === 'ingles') {
+    return [
+      `Brand/client: ${client.name}, ${client.segment}, ${client.location}.`,
+      `Personality and tone: ${listItems(brand.personality)}; ${brand.tone_of_voice}.`,
+      `Positioning and tagline: ${brand.positioning}; "${brand.tagline}".`,
+      `Logo direction: ${visual_identity.logo_direction}.`,
+      `Logo concept: ${board?.concept_name || 'n/a'}; type: ${board?.logo_type || 'n/a'}; composition: ${board?.composition || 'n/a'}.`,
+      `Symbol rationale: ${listItems(board?.symbol_meaning)}.`,
+      `Required variations: ${listItems(board?.required_variations)}.`,
+      `Board sections: ${listItems(board?.board_sections)}.`,
+      `Production notes: ${listItems(board?.production_notes)}.`,
+      `Palette: ${paletteSummary(briefing)}.`,
+      `Typography: ${typographySummary(briefing, language)}`,
+    ].join('\n');
+  }
+
+  return [
+    `Marca/cliente: ${client.name}, ${client.segment}, ${client.location}.`,
+    `Personalidade e tom: ${listItems(brand.personality)}; ${brand.tone_of_voice}.`,
+    `Posicionamento e tagline: ${brand.positioning}; "${brand.tagline}".`,
+    `Direção do logo: ${visual_identity.logo_direction}.`,
+    `Concepção da logo: ${board?.concept_name || 'n/a'}; tipo: ${board?.logo_type || 'n/a'}; composição: ${board?.composition || 'n/a'}.`,
+    `Simbologia: ${listItems(board?.symbol_meaning)}.`,
+    `Variações obrigatórias: ${listItems(board?.required_variations)}.`,
+    `Seções da prancha: ${listItems(board?.board_sections)}.`,
+    `Notas de produção: ${listItems(board?.production_notes)}.`,
+    `Paleta: ${paletteSummary(briefing)}.`,
+    `Tipografia: ${typographySummary(briefing, language)}`,
+  ].join('\n');
+}
+
+function buildBriefingContext(briefing: BriefingData, language: string): string {
+  const { client, audience } = briefing;
+
+  if (language === 'ingles') {
+    return [
+      `Business goal: ${client.business_goal}.`,
+      `Main problem: ${client.main_problem}.`,
+      `Primary audience: ${audience.primary_audience}.`,
+      `Pain points: ${listItems(audience.pain_points)}.`,
+      `Desires: ${listItems(audience.desires)}.`,
+    ].join('\n');
+  }
+
+  return [
+    `Objetivo de negócio: ${client.business_goal}.`,
+    `Problema principal: ${client.main_problem}.`,
+    `Público-alvo: ${audience.primary_audience}.`,
+    `Dores: ${listItems(audience.pain_points)}.`,
+    `Desejos: ${listItems(audience.desires)}.`,
+  ].join('\n');
+}
+
+function buildMoodboardContext(briefing: BriefingData, language: string): string {
+  const { moodboard } = briefing;
+
+  if (language === 'ingles') {
+    return [
+      `Moodboard keywords: ${listItems(moodboard.keywords)}.`,
+      `Visual references: ${listItems(moodboard.visual_references)}.`,
+      `Photography style: ${moodboard.photography_style}.`,
+      `Layout style: ${moodboard.layout_style}.`,
+      `Textures/materials: ${listItems(moodboard.texture_and_materials)}.`,
+    ].join('\n');
+  }
+
+  return [
+    `Palavras-chave do moodboard: ${listItems(moodboard.keywords)}.`,
+    `Referências visuais: ${listItems(moodboard.visual_references)}.`,
+    `Estilo fotográfico: ${moodboard.photography_style}.`,
+    `Estilo de layout: ${moodboard.layout_style}.`,
+    `Texturas/materiais: ${listItems(moodboard.texture_and_materials)}.`,
+  ].join('\n');
+}
+
+function buildDeliverablesContext(briefing: BriefingData, language: string): string {
+  if (language === 'ingles') {
+    return [
+      `Required deliverables: ${listItems(briefing.deliverables)}.`,
+      `Portfolio ideas: ${listItems(briefing.portfolio_project_ideas)}.`,
+    ].join('\n');
+  }
+
+  return [
+    `Entregáveis obrigatórios: ${listItems(briefing.deliverables)}.`,
+    `Ideias de portfólio: ${listItems(briefing.portfolio_project_ideas)}.`,
+  ].join('\n');
+}
+
+function enrichBriefingPrompts(briefing: BriefingData, language: string): BriefingData {
+  const brandContext = buildBrandContext(briefing, language);
+  const briefingContext = buildBriefingContext(briefing, language);
+  const moodboardContext = buildMoodboardContext(briefing, language);
+  const deliverablesContext = buildDeliverablesContext(briefing, language);
+
+  return {
+    ...briefing,
+    prompts: {
+      landing_page_prompt: appendExecutionContext(
+        briefing.prompts.landing_page_prompt,
+        [briefingContext, brandContext, deliverablesContext].join('\n'),
+        language
+      ),
+      logo_prompt: appendExecutionContext(
+        briefing.prompts.logo_prompt,
+        brandContext,
+        language
+      ),
+      logo_concept_board_prompt: appendExecutionContext(
+        briefing.prompts.logo_concept_board_prompt || briefing.prompts.logo_prompt,
+        [brandContext, deliverablesContext].join('\n'),
+        language
+      ),
+      moodboard_image_prompt: appendExecutionContext(
+        briefing.prompts.moodboard_image_prompt,
+        [brandContext, moodboardContext].join('\n'),
+        language
+      ),
+      social_media_prompt: appendExecutionContext(
+        briefing.prompts.social_media_prompt,
+        [briefingContext, brandContext].join('\n'),
+        language
+      ),
+      lovable_or_cursor_prompt: appendExecutionContext(
+        briefing.prompts.lovable_or_cursor_prompt,
+        [briefingContext, brandContext, moodboardContext, deliverablesContext].join('\n'),
+        language
+      ),
+      master_execution_prompt: appendExecutionContext(
+        briefing.prompts.master_execution_prompt,
+        [briefingContext, brandContext, moodboardContext, deliverablesContext].join('\n'),
+        language
+      ),
+    },
+  };
+}
+
+function applyPromptContext(
+  briefing: BriefingData,
+  context: BriefingData,
+  language: string
+): BriefingData {
+  return {
+    ...briefing,
+    prompts: enrichBriefingPrompts(
+      {
+        ...context,
+        prompts: briefing.prompts,
+      },
+      language
+    ).prompts,
+  };
+}
+
+function buildExistingBriefingInstruction(briefing: BriefingData, language: string): string {
+  const context = [
+    buildBriefingContext(briefing, language),
+    buildBrandContext(briefing, language),
+    buildMoodboardContext(briefing, language),
+    buildDeliverablesContext(briefing, language),
+  ].join('\n');
+
+  if (language === 'ingles') {
+    return `\nExisting briefing context to preserve as source of truth for regenerated prompts:\n${context}\n`;
+  }
+
+  return `\nContexto existente do briefing para preservar como fonte da verdade ao regenerar prompts:\n${context}\n`;
+}
+
 function validateBriefing(raw: any): BriefingData {
   return {
     client: {
@@ -611,13 +823,26 @@ export async function generateBriefingAI(params: {
   complexity: string;
   focusStage?: RegenerationStage;
   provider?: AiProvider;
+  currentBriefing?: BriefingData;
 }): Promise<BriefingData> {
-  const { business_type, visual_style, project_goal, language, complexity, focusStage, provider } = params;
+  const {
+    business_type,
+    visual_style,
+    project_goal,
+    language,
+    complexity,
+    focusStage,
+    provider,
+    currentBriefing,
+  } = params;
 
   const langName = SUPPORTED_LANGUAGES[language] || 'Portuguese (Brazilian)';
   const complexityInstruction = COMPLEXITY_INSTRUCTIONS[complexity] || COMPLEXITY_INSTRUCTIONS.completo;
   const focusInstruction = focusStage
     ? `\nRegeneration focus: ${REGENERATION_STAGE_INSTRUCTIONS[focusStage]}`
+    : '';
+  const existingBriefingInstruction = currentBriefing
+    ? buildExistingBriefingInstruction(currentBriefing, language)
     : '';
 
   const userMessage = `Create a brand briefing with these parameters:
@@ -629,6 +854,7 @@ export async function generateBriefingAI(params: {
 
 ${complexityInstruction}
 ${focusInstruction}
+${existingBriefingInstruction}
 
 Make prompts production-ready, with enough context for another AI agent to execute without reading the UI tabs manually.
 Make deliverables concrete enough for a designer/developer to know exactly what files, formats and visual boards must be produced.
@@ -658,7 +884,8 @@ Compact retry instruction: the previous response may be too long for this model.
 
   for (const [index, attempt] of attempts.entries()) {
     try {
-      return validateBriefing(await requestBriefingJson(config, attempt.message, attempt.maxTokens));
+      const validated = validateBriefing(await requestBriefingJson(config, attempt.message, attempt.maxTokens));
+      return applyPromptContext(validated, currentBriefing ?? validated, language);
     } catch (error) {
       const canRetry = error instanceof AiGenerationError && error.code === 'token_limit' && index === 0;
       if (!canRetry) {
