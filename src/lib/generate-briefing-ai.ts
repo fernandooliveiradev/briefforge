@@ -268,6 +268,7 @@ For typography, use Google Fonts. VARY widely per visual style:
 NEVER default to Playfair Display unless the style is Editorial or Luxury. Match font personality to visual style.
 Color palette must be cohesive — choose hex codes that work together for the given visual style.
 Make the brand feel like a real business, not generic placeholders.
+Vary the client location. Do not default to São Paulo, SP, Brazil. Choose a plausible city/state/country for the segment and language, including different Brazilian regions for Portuguese outputs and international locations for English outputs when appropriate. Use São Paulo only when it is specifically justified by the generated business context.
 Write ALL text in the requested language.`;
 
 const REGENERATION_STAGE_INSTRUCTIONS: Record<RegenerationStage, string> = {
@@ -936,6 +937,7 @@ ${existingBriefingInstruction}
 Make prompts production-ready, with enough context for another AI agent to execute without reading the UI tabs manually.
 Make deliverables concrete enough for a designer/developer to know exactly what files, formats and visual boards must be produced.
 Use the Agent Skills convention from agentskills.io: skill names in lowercase kebab-case, specific descriptions, concise activation criteria, concrete step-by-step instructions, and quality checks.
+Do not default the client location to São Paulo, SP, Brazil. Vary the generated location across plausible cities and regions for the chosen business type and language.
 Keep the response complete but compact enough to finish in one API response. Do not exceed the size limits defined in the system instructions.
 Write all textual content in ${langName}. Be creative and specific.`;
 
