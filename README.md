@@ -82,7 +82,7 @@ DEEPSEEK_MODEL=deepseek-v4-pro
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
 
-To enable OpenRouter with a free Gemma model:
+To enable OpenRouter, set the API key and the exact model slug you want to use:
 
 ```bash
 OPENROUTER_API_KEY=your_openrouter_key
@@ -90,7 +90,7 @@ OPENROUTER_MODEL=google/gemma-4-26b-a4b-it:free
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 ```
 
-You can also use `google/gemma-4-31b-it:free` as `OPENROUTER_MODEL`.
+BriefForge does not hardcode the OpenRouter model. It uses the value from `OPENROUTER_MODEL`. Free examples include `google/gemma-4-26b-a4b-it:free` and `google/gemma-4-31b-it:free`.
 
 `AI_PROVIDER` controls the default selected option on the creation screen. You can still choose OpenAI/GPT, DeepSeek, or OpenRouter per briefing in the UI, as long as that provider has a key configured. Restart the server after changing environment variables. See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md) for details.
 
@@ -114,7 +114,7 @@ Open http://localhost:3000.
 | `DEEPSEEK_MODEL` | No | DeepSeek chat model. Defaults to `deepseek-v4-pro`. |
 | `DEEPSEEK_BASE_URL` | No | DeepSeek base URL. Defaults to `https://api.deepseek.com`. |
 | `OPENROUTER_API_KEY` | When using OpenRouter | Server-side OpenRouter key. |
-| `OPENROUTER_MODEL` | No | OpenRouter model slug. Defaults to `google/gemma-4-26b-a4b-it:free`. |
+| `OPENROUTER_MODEL` | When using OpenRouter | Exact OpenRouter model slug to use, for example `google/gemma-4-26b-a4b-it:free`. |
 | `OPENROUTER_BASE_URL` | No | OpenRouter OpenAI-compatible base URL. Defaults to `https://openrouter.ai/api/v1`. |
 | `OPENROUTER_SITE_URL` | No | Optional app attribution URL sent to OpenRouter as `HTTP-Referer`. |
 | `OPENROUTER_APP_NAME` | No | Optional app attribution title sent to OpenRouter. Defaults to `BriefForge`. |

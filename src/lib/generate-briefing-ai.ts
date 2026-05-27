@@ -5,7 +5,6 @@ export type RegenerationStage = 'briefing' | 'brand' | 'moodboard' | 'prompts' |
 
 export const OPENAI_BRIEFING_MODEL = 'gpt-4o';
 export const DEEPSEEK_BRIEFING_MODEL = 'deepseek-v4-pro';
-export const OPENROUTER_BRIEFING_MODEL = 'google/gemma-4-26b-a4b-it:free';
 
 interface AiProviderConfig {
   provider: AiProvider;
@@ -62,13 +61,14 @@ export function getActiveAiConfig(providerOverride?: AiProvider): AiProviderConf
   if (provider === 'openrouter') {
     const referer = process.env.OPENROUTER_SITE_URL?.trim();
     const title = process.env.OPENROUTER_APP_NAME?.trim() || 'BriefForge';
+    const model = process.env.OPENROUTER_MODEL?.trim() || '';
 
     return {
       provider,
       displayName: 'OpenRouter',
       apiKey: process.env.OPENROUTER_API_KEY,
       baseUrl: cleanBaseUrl(process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1'),
-      model: process.env.OPENROUTER_MODEL || OPENROUTER_BRIEFING_MODEL,
+      model,
       responseFormat: { type: 'json_object' },
       headers: {
         ...(referer ? { 'HTTP-Referer': referer } : {}),
@@ -108,7 +108,8 @@ export function getActiveAiModelLabel(providerOverride?: AiProvider): string {
 
 export function hasAiKey(providerOverride?: AiProvider): boolean {
   try {
-    return !!getActiveAiConfig(providerOverride).apiKey;
+    const config = getActiveAiConfig(providerOverride);
+    return !!config.apiKey && !!config.model;
   } catch {
     return false;
   }
@@ -895,6 +896,14 @@ Write all textual content in ${langName}. Be creative and specific.`;
       `${config.displayName} API key is not configured`,
       `A chave do ${config.displayName} não está configurada.`,
       'missing_api_key'
+    );
+  }
+
+  if (!config.model) {
+    throw new AiGenerationError(
+      `${config.displayName} model is not configured`,
+      `O modelo do ${config.displayName} não está configurado. Defina OPENROUTER_MODEL no .env.`,
+      'missing_model'
     );
   }
 

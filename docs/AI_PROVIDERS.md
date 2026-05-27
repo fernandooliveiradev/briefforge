@@ -38,6 +38,8 @@ Free Gemma model options currently documented for this project:
 - `google/gemma-4-26b-a4b-it:free`
 - `google/gemma-4-31b-it:free`
 
+BriefForge does not hardcode the OpenRouter model. It sends exactly the model slug configured in `OPENROUTER_MODEL`.
+
 `OPENROUTER_SITE_URL` and `OPENROUTER_APP_NAME` are optional app attribution headers. They help OpenRouter identify the app, but generation works without them.
 
 To make multiple options available, configure each matching key: `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, and/or `OPENROUTER_API_KEY`. After changing provider variables, restart the Next.js server.

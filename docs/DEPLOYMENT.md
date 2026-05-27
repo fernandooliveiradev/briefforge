@@ -20,7 +20,7 @@ BriefForge is local-first software. It can run on a private machine, a small VPS
 | `DEEPSEEK_MODEL` | No | Defaults to `deepseek-v4-pro`. |
 | `DEEPSEEK_BASE_URL` | No | Defaults to `https://api.deepseek.com`. |
 | `OPENROUTER_API_KEY` | When using OpenRouter | Keep server-side only. |
-| `OPENROUTER_MODEL` | No | Defaults to `google/gemma-4-26b-a4b-it:free`. |
+| `OPENROUTER_MODEL` | When using OpenRouter | Exact OpenRouter model slug to use. |
 | `OPENROUTER_BASE_URL` | No | Defaults to `https://openrouter.ai/api/v1`. |
 | `OPENROUTER_SITE_URL` | No | Optional OpenRouter app attribution URL. |
 | `OPENROUTER_APP_NAME` | No | Optional OpenRouter app attribution title. |
