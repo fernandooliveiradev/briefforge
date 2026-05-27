@@ -15,6 +15,7 @@ interface AiProviderConfig {
   model: string;
   responseFormat: unknown;
   headers?: Record<string, string>;
+  timeoutMs: number;
 }
 
 export class AiGenerationError extends Error {
@@ -73,6 +74,7 @@ export function getActiveAiConfig(providerOverride?: AiProvider): AiProviderConf
         ...(referer ? { 'HTTP-Referer': referer } : {}),
         'X-OpenRouter-Title': title,
       },
+      timeoutMs: 300_000,
     };
   }
 
@@ -84,6 +86,7 @@ export function getActiveAiConfig(providerOverride?: AiProvider): AiProviderConf
       baseUrl: cleanBaseUrl(process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com'),
       model: process.env.DEEPSEEK_MODEL || DEEPSEEK_BRIEFING_MODEL,
       responseFormat: { type: 'json_object' },
+      timeoutMs: 240_000,
     };
   }
 
@@ -94,6 +97,7 @@ export function getActiveAiConfig(providerOverride?: AiProvider): AiProviderConf
     baseUrl: cleanBaseUrl(process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'),
     model: process.env.OPENAI_MODEL || OPENAI_BRIEFING_MODEL,
     responseFormat: BRIEFING_RESPONSE_FORMAT,
+    timeoutMs: 240_000,
   };
 }
 
@@ -755,7 +759,7 @@ function validateBriefing(raw: any): BriefingData {
 
 async function requestBriefingJson(config: AiProviderConfig, userMessage: string, maxTokens: number): Promise<unknown> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 180_000);
+  const timeoutId = setTimeout(() => controller.abort(), config.timeoutMs);
 
   try {
     const body: Record<string, unknown> = {
@@ -825,9 +829,10 @@ async function requestBriefingJson(config: AiProviderConfig, userMessage: string
     clearTimeout(timeoutId);
 
     if (error instanceof Error && error.name === 'AbortError') {
+      const timeoutSeconds = Math.round(config.timeoutMs / 1000);
       throw new AiGenerationError(
-        `${config.displayName} request timed out (180s)`,
-        `${config.displayName} demorou demais para responder. Tente novamente.`,
+        `${config.displayName} request timed out (${timeoutSeconds}s)`,
+        `${config.displayName} demorou demais para responder (${timeoutSeconds}s). Tente novamente ou use uma complexidade menor.`,
         'timeout'
       );
     }

@@ -38,6 +38,24 @@ export function NewProjectForm({ defaultAiProvider }: { defaultAiProvider: AiPro
 
   const isFormValid = form.business_type && form.visual_style && form.project_goal;
 
+  const readErrorMessage = async (response: Response): Promise<string> => {
+    const fallback = `Erro ${response.status} ao gerar briefing`;
+    const text = await response.clone().text().catch(() => "");
+
+    if (!text) {
+      return fallback;
+    }
+
+    try {
+      const body = JSON.parse(text) as { error?: unknown };
+      return typeof body.error === "string" && body.error.trim()
+        ? body.error
+        : fallback;
+    } catch {
+      return fallback;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid || isGenerating) return;
@@ -51,20 +69,14 @@ export function NewProjectForm({ defaultAiProvider }: { defaultAiProvider: AiPro
       });
 
       if (!res.ok) {
-        const text = await res.clone().text().catch(() => "");
-        let errorMsg = `Erro ${res.status} ao gerar briefing`;
-        try {
-          const errorBody = JSON.parse(text);
-          errorMsg = errorBody?.error || errorMsg;
-        } catch { /* não é JSON, usa a mensagem padrão */ }
-        throw new Error(errorMsg);
+        toast.error(await readErrorMessage(res));
+        return;
       }
 
       const project = await res.json();
       toast.success("Briefing criado com sucesso.");
       router.push(`/projects/${project.id}`);
     } catch (err) {
-      console.error(err);
       toast.error(err instanceof Error ? err.message : "Erro ao gerar. Tente novamente.");
     } finally {
       setIsGenerating(false);
