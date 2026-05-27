@@ -153,6 +153,7 @@ BriefForge is local-first, but the repository is structured so it can be hardene
 - SQLite uses WAL mode, transactions, schema versioning, foreign keys, and indexed project queries.
 
 See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for recommended deployment settings and scale-up paths.
+See [`docs/OPERATIONS.md`](docs/OPERATIONS.md) for release/versioning rules and the current login model.
 
 ## Roadmap
 
