@@ -20,13 +20,9 @@ import {
   rateLimitResponse,
   withRateLimitHeaders,
 } from '@/lib/rate-limit';
+import { readJsonBody } from '@/lib/request-body';
 
 const MAX_PROJECT_PAYLOAD_BYTES = 16 * 1024;
-
-function isPayloadTooLarge(request: NextRequest): boolean {
-  const contentLength = Number(request.headers.get('content-length') || 0);
-  return Number.isFinite(contentLength) && contentLength > MAX_PROJECT_PAYLOAD_BYTES;
-}
 
 export async function GET(request: NextRequest) {
   const unauthorized = await requireApiAccess();
@@ -58,12 +54,10 @@ export async function POST(request: NextRequest) {
   const limit = limitAiGeneration(request);
   if (!limit.ok) return rateLimitResponse(limit);
 
-  if (isPayloadTooLarge(request)) {
-    return apiError('Payload muito grande.', 413, 'payload_too_large');
-  }
+  const bodyResult = await readJsonBody(request, MAX_PROJECT_PAYLOAD_BYTES);
+  if (!bodyResult.ok) return bodyResult.response;
 
-  const body = await request.json().catch(() => null);
-  const parsedBody = projectRequestSchema.safeParse(body);
+  const parsedBody = projectRequestSchema.safeParse(bodyResult.data);
 
   if (!parsedBody.success) {
     return invalidRequestResponse();

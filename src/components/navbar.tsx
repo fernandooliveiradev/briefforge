@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PenLine, FolderOpen, Hammer } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { AppButton } from "@/components/app-button";
 
 const Navbar = () => {

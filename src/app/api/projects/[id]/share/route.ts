@@ -4,6 +4,9 @@ import { isProjectDatabaseError, setProjectPublic } from '@/lib/db';
 import { parseProjectId } from '@/lib/project-id';
 import { requireApiAccess } from '@/lib/server-access';
 import { limitProjectMutation, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
+import { readJsonBody } from '@/lib/request-body';
+
+const MAX_SHARE_PAYLOAD_BYTES = 1024;
 
 export async function POST(
   request: Request,
@@ -22,7 +25,10 @@ export async function POST(
     return invalidRequestResponse('Project id invalid');
   }
 
-  const body = await request.json().catch(() => null);
+  const bodyResult = await readJsonBody(request, MAX_SHARE_PAYLOAD_BYTES);
+  if (!bodyResult.ok) return bodyResult.response;
+
+  const body = bodyResult.data as { is_public?: unknown } | null;
   const isPublic = typeof body?.is_public === 'boolean' ? body.is_public : true;
 
   try {

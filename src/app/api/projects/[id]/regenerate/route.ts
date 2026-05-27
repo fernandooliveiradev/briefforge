@@ -17,6 +17,9 @@ import {
 import { parseProjectId } from '@/lib/project-id';
 import { requireApiAccess } from '@/lib/server-access';
 import { limitAiGeneration, rateLimitResponse, withRateLimitHeaders } from '@/lib/rate-limit';
+import { readJsonBody } from '@/lib/request-body';
+
+const MAX_REGENERATE_PAYLOAD_BYTES = 1024;
 
 const stages = new Set<RegenerationStage>([
   'briefing',
@@ -106,7 +109,10 @@ export async function POST(
     return invalidRequestResponse('Project id invalid');
   }
 
-  const body = await request.json().catch(() => null);
+  const bodyResult = await readJsonBody(request, MAX_REGENERATE_PAYLOAD_BYTES);
+  if (!bodyResult.ok) return bodyResult.response;
+
+  const body = bodyResult.data as { stage?: unknown } | null;
   const stage = body?.stage as RegenerationStage | undefined;
 
   if (!stage || !stages.has(stage)) {

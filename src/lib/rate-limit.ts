@@ -109,7 +109,3 @@ export function limitProjectMutation(request: Request): RateLimitResult {
 export function limitAiGeneration(request: Request): RateLimitResult {
   return rateLimitRequest(request, 'ai-generation', { limit: 6, windowMs: 60 * 60 * 1000 });
 }
-
-export function limitPublicShare(request: Request): RateLimitResult {
-  return rateLimitRequest(request, 'public-share', { limit: 120, windowMs: 60 * 1000 });
-}
