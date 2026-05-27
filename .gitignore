@@ -25,6 +25,7 @@
 # misc
 .DS_Store
 *.pem
+.dyad/
 
 # debug
 npm-debug.log*
