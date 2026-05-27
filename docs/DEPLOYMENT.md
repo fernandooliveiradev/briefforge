@@ -12,13 +12,18 @@ BriefForge is local-first software. It can run on a private machine, a small VPS
 
 | Variable | Required | Notes |
 | --- | --- | --- |
-| `AI_PROVIDER` | No | Default UI provider: `openai` or `deepseek`. |
+| `AI_PROVIDER` | No | Default UI provider: `openai`, `deepseek`, or `openrouter`. |
 | `OPENAI_API_KEY` | When using OpenAI | Keep server-side only. |
 | `OPENAI_MODEL` | No | Defaults to `gpt-4o`. |
 | `OPENAI_BASE_URL` | No | Defaults to `https://api.openai.com/v1`. |
 | `DEEPSEEK_API_KEY` | When using DeepSeek | Keep server-side only. |
 | `DEEPSEEK_MODEL` | No | Defaults to `deepseek-v4-pro`. |
 | `DEEPSEEK_BASE_URL` | No | Defaults to `https://api.deepseek.com`. |
+| `OPENROUTER_API_KEY` | When using OpenRouter | Keep server-side only. |
+| `OPENROUTER_MODEL` | No | Defaults to `google/gemma-4-26b-a4b-it:free`. |
+| `OPENROUTER_BASE_URL` | No | Defaults to `https://openrouter.ai/api/v1`. |
+| `OPENROUTER_SITE_URL` | No | Optional OpenRouter app attribution URL. |
+| `OPENROUTER_APP_NAME` | No | Optional OpenRouter app attribution title. |
 | `BRIEFFORGE_ACCESS_PASSWORD` | Recommended in production | Enables the private access gate. |
 | `BRIEFFORGE_SESSION_SECRET` | Recommended in production | Separate random secret for signed sessions. |
 | `NEXT_DIST_DIR` | No | Optional build output directory override. |

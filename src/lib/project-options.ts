@@ -46,6 +46,7 @@ export const complexityOptions = [
 export const aiProviderOptions = [
   { value: 'openai', label: 'OpenAI / GPT' },
   { value: 'deepseek', label: 'DeepSeek' },
+  { value: 'openrouter', label: 'OpenRouter / Gemma free' },
 ] as const;
 
 const optionValues = <T extends ReadonlyArray<{ value: string }>>(options: T) =>

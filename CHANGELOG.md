@@ -17,6 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Stage-level regeneration for briefing, brand, moodboard, prompts, and deliverables.
 - Public read-only sharing links.
 - DeepSeek provider support alongside OpenAI.
+- OpenRouter provider support with free Gemma model configuration.
 - Provider selection on the briefing creation screen, with regeneration following the provider saved on each briefing.
 - Logo concept board output with logo type, composition, symbolism, required variations, board sections, production notes, and a dedicated prompt for visual identity boards.
 - Deliverable generation now asks for concrete production files, brand board assets, logo variations, export formats, usage notes, and acceptance criteria.

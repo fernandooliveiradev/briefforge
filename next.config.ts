@@ -17,7 +17,7 @@ const securityHeaders = [
       "font-src 'self' data:",
       "style-src 'self' 'unsafe-inline'",
       scriptSrc,
-      "connect-src 'self' ws: wss: https://api.openai.com https://api.deepseek.com",
+      "connect-src 'self' ws: wss: https://api.openai.com https://api.deepseek.com https://openrouter.ai",
       "upgrade-insecure-requests",
     ].join("; "),
   },

@@ -30,6 +30,7 @@ const stages = new Set<RegenerationStage>([
 ]);
 
 function providerFromAiModel(aiModel: string): AiProvider {
+  if (aiModel.startsWith('openrouter:')) return 'openrouter';
   if (aiModel.startsWith('deepseek:')) return 'deepseek';
   return 'openai';
 }

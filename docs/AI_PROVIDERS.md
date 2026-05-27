@@ -1,8 +1,8 @@
 # AI Providers
 
-BriefForge supports OpenAI and DeepSeek through server-side environment variables. The creation screen lets the user choose the provider per briefing.
+BriefForge supports OpenAI, DeepSeek, and OpenRouter through server-side environment variables. The creation screen lets the user choose the provider per briefing.
 
-`AI_PROVIDER` only controls the default option selected in the UI. A briefing can still be generated with either provider when the matching API key is configured.
+`AI_PROVIDER` only controls the default option selected in the UI. A briefing can still be generated with any provider when the matching API key is configured.
 
 ## OpenAI
 
@@ -22,12 +22,30 @@ DEEPSEEK_MODEL=deepseek-v4-pro
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
 
-To make both options available, configure both `OPENAI_API_KEY` and `DEEPSEEK_API_KEY`. After changing provider variables, restart the Next.js server.
+## OpenRouter
+
+```env
+AI_PROVIDER=openrouter
+OPENROUTER_API_KEY=your_openrouter_key
+OPENROUTER_MODEL=google/gemma-4-26b-a4b-it:free
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_SITE_URL=https://your-site.example
+OPENROUTER_APP_NAME=BriefForge
+```
+
+Free Gemma model options currently documented for this project:
+
+- `google/gemma-4-26b-a4b-it:free`
+- `google/gemma-4-31b-it:free`
+
+`OPENROUTER_SITE_URL` and `OPENROUTER_APP_NAME` are optional app attribution headers. They help OpenRouter identify the app, but generation works without them.
+
+To make multiple options available, configure each matching key: `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`, and/or `OPENROUTER_API_KEY`. After changing provider variables, restart the Next.js server.
 
 ## Runtime Behavior
 
 - The selected provider is sent with the briefing creation request.
-- BriefForge saves the provider and model as `openai:model` or `deepseek:model` in the project record.
+- BriefForge saves the provider and model as `openai:model`, `deepseek:model`, or `openrouter:model` in the project record.
 - Stage regeneration follows the provider saved on that briefing.
 - If the selected provider has no API key or returns invalid data, the project or stage update is not persisted.
 
@@ -35,6 +53,8 @@ To make both options available, configure both `OPENAI_API_KEY` and `DEEPSEEK_AP
 
 - OpenAI uses Chat Completions with strict JSON Schema output.
 - DeepSeek uses its OpenAI-compatible `POST /chat/completions` endpoint with JSON output mode.
+- OpenRouter uses its OpenAI-compatible `POST /chat/completions` endpoint with JSON output mode and optional app attribution headers.
+- Free OpenRouter models may have provider-side rate limits or availability changes. If generation fails, try again later or switch `OPENROUTER_MODEL`.
 - BriefForge validates the returned JSON before saving.
 
 References:
@@ -42,3 +62,5 @@ References:
 - OpenAI API documentation: <https://platform.openai.com/docs>
 - DeepSeek chat completion documentation: <https://api-docs.deepseek.com/api/create-chat-completion>
 - DeepSeek cURL example: <https://api-docs.deepseek.com/api_samples/chat_curl>
+- OpenRouter API reference: <https://openrouter.ai/docs/api/reference/overview>
+- OpenRouter quickstart: <https://openrouter.ai/docs/quickstart>

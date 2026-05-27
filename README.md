@@ -24,7 +24,7 @@ BriefForge is designed as a private creative operations tool: generate a fiction
 ## Features
 
 - Generate fictional clients by business type, visual style, project goal, language, and complexity.
-- Choose OpenAI/GPT or DeepSeek per briefing from the creation screen.
+- Choose OpenAI/GPT, DeepSeek, or OpenRouter per briefing from the creation screen.
 - Produce structured brand, audience, visual identity, logo concept board, moodboard, prompts, production-ready deliverables, and agent skills.
 - Copy execution prompts for design, development, and content workflows.
 - Export briefings as Markdown or through a print-ready PDF view.
@@ -45,13 +45,13 @@ BriefForge is designed as a private creative operations tool: generate a fiction
 - Radix UI / shadcn-style components
 - Zod
 - Native SQLite via `node:sqlite`
-- OpenAI API or DeepSeek API
+- OpenAI API, DeepSeek API, or OpenRouter API
 
 ## Requirements
 
 - Node.js 24 or 25
 - pnpm 10 or newer
-- An OpenAI or DeepSeek API key
+- An OpenAI, DeepSeek, or OpenRouter API key
 
 ## Getting Started
 
@@ -82,7 +82,17 @@ DEEPSEEK_MODEL=deepseek-v4-pro
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
 
-`AI_PROVIDER` controls the default selected option on the creation screen. You can still choose OpenAI/GPT or DeepSeek per briefing in the UI, as long as that provider has a key configured. Restart the server after changing environment variables. See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md) for details.
+To enable OpenRouter with a free Gemma model:
+
+```bash
+OPENROUTER_API_KEY=your_openrouter_key
+OPENROUTER_MODEL=google/gemma-4-26b-a4b-it:free
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+```
+
+You can also use `google/gemma-4-31b-it:free` as `OPENROUTER_MODEL`.
+
+`AI_PROVIDER` controls the default selected option on the creation screen. You can still choose OpenAI/GPT, DeepSeek, or OpenRouter per briefing in the UI, as long as that provider has a key configured. Restart the server after changing environment variables. See [`docs/AI_PROVIDERS.md`](docs/AI_PROVIDERS.md) for details.
 
 Start the development server:
 
@@ -96,13 +106,18 @@ Open http://localhost:3000.
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `AI_PROVIDER` | No | Default provider selected in the UI. Use `openai` or `deepseek`. Defaults to `openai`. |
+| `AI_PROVIDER` | No | Default provider selected in the UI. Use `openai`, `deepseek`, or `openrouter`. Defaults to `openai`. |
 | `OPENAI_API_KEY` | When using OpenAI/GPT | Server-side OpenAI key. |
 | `OPENAI_MODEL` | No | OpenAI chat model. Defaults to `gpt-4o`. |
 | `OPENAI_BASE_URL` | No | OpenAI-compatible base URL. Defaults to `https://api.openai.com/v1`. |
 | `DEEPSEEK_API_KEY` | When using DeepSeek | Server-side DeepSeek key. |
 | `DEEPSEEK_MODEL` | No | DeepSeek chat model. Defaults to `deepseek-v4-pro`. |
 | `DEEPSEEK_BASE_URL` | No | DeepSeek base URL. Defaults to `https://api.deepseek.com`. |
+| `OPENROUTER_API_KEY` | When using OpenRouter | Server-side OpenRouter key. |
+| `OPENROUTER_MODEL` | No | OpenRouter model slug. Defaults to `google/gemma-4-26b-a4b-it:free`. |
+| `OPENROUTER_BASE_URL` | No | OpenRouter OpenAI-compatible base URL. Defaults to `https://openrouter.ai/api/v1`. |
+| `OPENROUTER_SITE_URL` | No | Optional app attribution URL sent to OpenRouter as `HTTP-Referer`. |
+| `OPENROUTER_APP_NAME` | No | Optional app attribution title sent to OpenRouter. Defaults to `BriefForge`. |
 | `BRIEFFORGE_ACCESS_PASSWORD` | No | Optional password gate for private routes and project APIs. Recommended for any deployed instance. |
 | `BRIEFFORGE_SESSION_SECRET` | No | Optional extra secret used to derive the access cookie. Recommended when access control is enabled. |
 

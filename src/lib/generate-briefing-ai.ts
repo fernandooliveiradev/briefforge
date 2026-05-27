@@ -1,10 +1,11 @@
 import type { BriefingData } from './db';
 
-export type AiProvider = 'openai' | 'deepseek';
+export type AiProvider = 'openai' | 'deepseek' | 'openrouter';
 export type RegenerationStage = 'briefing' | 'brand' | 'moodboard' | 'prompts' | 'deliverables';
 
 export const OPENAI_BRIEFING_MODEL = 'gpt-4o';
 export const DEEPSEEK_BRIEFING_MODEL = 'deepseek-v4-pro';
+export const OPENROUTER_BRIEFING_MODEL = 'google/gemma-4-26b-a4b-it:free';
 
 interface AiProviderConfig {
   provider: AiProvider;
@@ -13,6 +14,7 @@ interface AiProviderConfig {
   baseUrl: string;
   model: string;
   responseFormat: unknown;
+  headers?: Record<string, string>;
 }
 
 export class AiGenerationError extends Error {
@@ -46,8 +48,8 @@ function cleanBaseUrl(value: string): string {
 export function getActiveAiProvider(providerOverride?: AiProvider): AiProvider {
   const provider = (providerOverride || process.env.AI_PROVIDER || 'openai').toLowerCase();
 
-  if (provider !== 'openai' && provider !== 'deepseek') {
-    throw new Error('AI_PROVIDER must be either "openai" or "deepseek"');
+  if (provider !== 'openai' && provider !== 'deepseek' && provider !== 'openrouter') {
+    throw new Error('AI_PROVIDER must be either "openai", "deepseek", or "openrouter"');
   }
 
   return provider;
@@ -55,6 +57,24 @@ export function getActiveAiProvider(providerOverride?: AiProvider): AiProvider {
 
 export function getActiveAiConfig(providerOverride?: AiProvider): AiProviderConfig {
   const provider = getActiveAiProvider(providerOverride);
+
+  if (provider === 'openrouter') {
+    const referer = process.env.OPENROUTER_SITE_URL?.trim();
+    const title = process.env.OPENROUTER_APP_NAME?.trim() || 'BriefForge';
+
+    return {
+      provider,
+      displayName: 'OpenRouter',
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseUrl: cleanBaseUrl(process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1'),
+      model: process.env.OPENROUTER_MODEL || OPENROUTER_BRIEFING_MODEL,
+      responseFormat: { type: 'json_object' },
+      headers: {
+        ...(referer ? { 'HTTP-Referer': referer } : {}),
+        'X-OpenRouter-Title': title,
+      },
+    };
+  }
 
   if (provider === 'deepseek') {
     return {
@@ -754,6 +774,7 @@ async function requestBriefingJson(config: AiProviderConfig, userMessage: string
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${config.apiKey}`,
+        ...config.headers,
       },
       body: JSON.stringify(body),
       signal: controller.signal,
