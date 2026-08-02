@@ -505,14 +505,23 @@ const BRIEFING_RESPONSE_FORMAT = {
   },
 } as const;
 
-function validateString(val: any, path: string): string {
+type JsonRecord = Record<string, unknown>;
+
+function asRecord(val: unknown): JsonRecord | undefined {
+  if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
+    return val as JsonRecord;
+  }
+  return undefined;
+}
+
+function validateString(val: unknown, path: string): string {
   if (typeof val !== 'string' || val.trim().length === 0) {
     throw new Error(`AI response missing or invalid field: ${path}`);
   }
   return val.trim();
 }
 
-function extractJsonObject(content: string): unknown {
+export function extractJsonObject(content: string): unknown {
   const trimmed = content.trim();
 
   try {
@@ -575,55 +584,59 @@ function extractJsonObject(content: string): unknown {
   throw new Error('Incomplete JSON object');
 }
 
-function validateStringArray(val: any, path: string): string[] | undefined {
+function validateStringArray(val: unknown, path: string): string[] | undefined {
   if (val === undefined || val === null) {
     return undefined;
   }
   if (!Array.isArray(val) || val.length === 0) {
     throw new Error(`AI response missing or empty array: ${path}`);
   }
-  const filtered = val.filter((v) => typeof v === 'string' && v.trim().length > 0);
+  const filtered = val.filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
   if (filtered.length === 0) {
     throw new Error(`AI response array has no valid strings: ${path}`);
   }
   return filtered;
 }
 
-function validateColorPalette(val: any, path: string): Array<{ name: string; hex: string; usage: string }> | undefined {
+function validateColorPalette(val: unknown, path: string): Array<{ name: string; hex: string; usage: string }> | undefined {
   if (val === undefined || val === null) {
     return undefined;
   }
   if (!Array.isArray(val) || val.length === 0) {
     throw new Error(`AI response missing color palette: ${path}`);
   }
-  const valid = val.filter(
-    (c: any) =>
-      typeof c?.name === 'string' && c.name.trim().length > 0 &&
-      typeof c?.hex === 'string' && /^#[0-9A-Fa-f]{6}$/.test(c.hex) &&
-      typeof c?.usage === 'string' && c.usage.trim().length > 0
-  );
+  const valid = val.filter((c): c is { name: string; hex: string; usage: string } => {
+    const record = asRecord(c);
+    if (!record) return false;
+    return (
+      typeof record.name === 'string' && record.name.trim().length > 0 &&
+      typeof record.hex === 'string' && /^#[0-9A-Fa-f]{6}$/.test(record.hex) &&
+      typeof record.usage === 'string' && record.usage.trim().length > 0
+    );
+  });
   if (valid.length === 0) {
     throw new Error(`AI response color palette has no valid entries: ${path}`);
   }
   return valid.slice(0, 10);
 }
 
-function validateLogoConceptBoard(val: any, path: string): NonNullable<BriefingData['visual_identity']['logo_concept_board']> | undefined {
+function validateLogoConceptBoard(val: unknown, path: string): NonNullable<BriefingData['visual_identity']['logo_concept_board']> | undefined {
   if (val === undefined || val === null) {
     return undefined;
   }
+  const record = asRecord(val);
   return {
-    concept_name: validateString(val?.concept_name, `${path}.concept_name`),
-    logo_type: validateString(val?.logo_type, `${path}.logo_type`),
-    composition: validateString(val?.composition, `${path}.composition`),
-    symbol_meaning: validateStringArray(val?.symbol_meaning, `${path}.symbol_meaning`) ?? [],
-    required_variations: validateStringArray(val?.required_variations, `${path}.required_variations`) ?? [],
-    board_sections: validateStringArray(val?.board_sections, `${path}.board_sections`) ?? [],
-    production_notes: validateStringArray(val?.production_notes, `${path}.production_notes`) ?? [],
+    concept_name: validateString(record?.concept_name, `${path}.concept_name`),
+    logo_type: validateString(record?.logo_type, `${path}.logo_type`),
+    composition: validateString(record?.composition, `${path}.composition`),
+    symbol_meaning: validateStringArray(record?.symbol_meaning, `${path}.symbol_meaning`) ?? [],
+    required_variations: validateStringArray(record?.required_variations, `${path}.required_variations`) ?? [],
+    board_sections: validateStringArray(record?.board_sections, `${path}.board_sections`) ?? [],
+    production_notes: validateStringArray(record?.production_notes, `${path}.production_notes`) ?? [],
   };
 }
 
-function normalizeSkillName(val: any, path: string): string {
+function normalizeSkillName(val: unknown, path: string): string {
   const rawName = validateString(val, path);
   const normalized = rawName
     .normalize('NFD')
@@ -640,50 +653,65 @@ function normalizeSkillName(val: any, path: string): string {
   return normalized;
 }
 
-function validateAgentSkill(val: any, path: string) {
+function validateAgentSkill(val: unknown, path: string) {
   if (val === undefined || val === null) {
     return undefined;
   }
+  const record = asRecord(val);
   return {
-    name: normalizeSkillName(val?.name, `${path}.name`),
-    description: validateString(val?.description, `${path}.description`),
-    when_to_use: validateString(val?.when_to_use, `${path}.when_to_use`),
-    instructions: validateStringArray(val?.instructions, `${path}.instructions`) ?? [],
-    quality_checks: validateStringArray(val?.quality_checks, `${path}.quality_checks`) ?? [],
+    name: normalizeSkillName(record?.name, `${path}.name`),
+    description: validateString(record?.description, `${path}.description`),
+    when_to_use: validateString(record?.when_to_use, `${path}.when_to_use`),
+    instructions: validateStringArray(record?.instructions, `${path}.instructions`) ?? [],
+    quality_checks: validateStringArray(record?.quality_checks, `${path}.quality_checks`) ?? [],
   };
 }
 
-function validateBriefingStage(raw: any) {
+// Reads a dotted path (e.g. "client.name") from untrusted AI JSON without
+// throwing on intermediate non-object values.
+function readPath(raw: unknown, path: string): unknown {
+  let current = raw;
+  for (const key of path.split('.')) {
+    const record = asRecord(current);
+    if (!record) {
+      return undefined;
+    }
+    current = record[key];
+  }
+  return current;
+}
+
+function validateBriefingStage(raw: unknown) {
   return {
     client: {
-      name: validateString(raw?.client?.name, 'client.name'),
-      segment: validateString(raw?.client?.segment, 'client.segment'),
-      location: validateString(raw?.client?.location, 'client.location'),
-      short_description: validateString(raw?.client?.short_description, 'client.short_description'),
-      brand_story: validateString(raw?.client?.brand_story, 'client.brand_story'),
-      main_problem: validateString(raw?.client?.main_problem, 'client.main_problem'),
-      business_goal: validateString(raw?.client?.business_goal, 'client.business_goal'),
+      name: validateString(readPath(raw, 'client.name'), 'client.name'),
+      segment: validateString(readPath(raw, 'client.segment'), 'client.segment'),
+      location: validateString(readPath(raw, 'client.location'), 'client.location'),
+      short_description: validateString(readPath(raw, 'client.short_description'), 'client.short_description'),
+      brand_story: validateString(readPath(raw, 'client.brand_story'), 'client.brand_story'),
+      main_problem: validateString(readPath(raw, 'client.main_problem'), 'client.main_problem'),
+      business_goal: validateString(readPath(raw, 'client.business_goal'), 'client.business_goal'),
     },
     audience: {
-      primary_audience: validateString(raw?.audience?.primary_audience, 'audience.primary_audience'),
-      pain_points: validateStringArray(raw?.audience?.pain_points, 'audience.pain_points') ?? [],
-      desires: validateStringArray(raw?.audience?.desires, 'audience.desires') ?? [],
+      primary_audience: validateString(readPath(raw, 'audience.primary_audience'), 'audience.primary_audience'),
+      pain_points: validateStringArray(readPath(raw, 'audience.pain_points'), 'audience.pain_points') ?? [],
+      desires: validateStringArray(readPath(raw, 'audience.desires'), 'audience.desires') ?? [],
     },
   };
 }
 
-function validateBrandStage(raw: any) {
+function validateBrandStage(raw: unknown) {
   return {
     brand: {
-      personality: validateStringArray(raw?.brand?.personality, 'brand.personality') ?? [],
-      tone_of_voice: validateString(raw?.brand?.tone_of_voice, 'brand.tone_of_voice'),
-      positioning: validateString(raw?.brand?.positioning, 'brand.positioning'),
-      tagline: validateString(raw?.brand?.tagline, 'brand.tagline'),
+      personality: validateStringArray(readPath(raw, 'brand.personality'), 'brand.personality') ?? [],
+      tone_of_voice: validateString(readPath(raw, 'brand.tone_of_voice'), 'brand.tone_of_voice'),
+      positioning: validateString(readPath(raw, 'brand.positioning'), 'brand.positioning'),
+      tagline: validateString(readPath(raw, 'brand.tagline'), 'brand.tagline'),
     },
     visual_identity: {
-      logo_direction: validateString(raw?.visual_identity?.logo_direction, 'visual_identity.logo_direction'),
+      logo_direction: validateString(readPath(raw, 'visual_identity.logo_direction'), 'visual_identity.logo_direction'),
       logo_concept_board: validateLogoConceptBoard(
-        raw?.visual_identity?.logo_concept_board,
+        readPath(raw, 'visual_identity.logo_concept_board'),
         'visual_identity.logo_concept_board'
       ) ?? {
         concept_name: '',
@@ -694,43 +722,43 @@ function validateBrandStage(raw: any) {
         board_sections: [],
         production_notes: [],
       },
-      color_palette: validateColorPalette(raw?.visual_identity?.color_palette, 'visual_identity.color_palette') ?? [],
+      color_palette: validateColorPalette(readPath(raw, 'visual_identity.color_palette'), 'visual_identity.color_palette') ?? [],
       typography: {
-        heading: validateString(raw?.visual_identity?.typography?.heading, 'visual_identity.typography.heading'),
-        body: validateString(raw?.visual_identity?.typography?.body, 'visual_identity.typography.body'),
-        accent: validateString(raw?.visual_identity?.typography?.accent, 'visual_identity.typography.accent'),
+        heading: validateString(readPath(raw, 'visual_identity.typography.heading'), 'visual_identity.typography.heading'),
+        body: validateString(readPath(raw, 'visual_identity.typography.body'), 'visual_identity.typography.body'),
+        accent: validateString(readPath(raw, 'visual_identity.typography.accent'), 'visual_identity.typography.accent'),
       },
     },
   };
 }
 
-function validateMoodboardStage(raw: any) {
+function validateMoodboardStage(raw: unknown) {
   return {
     moodboard: {
-      keywords: validateStringArray(raw?.moodboard?.keywords, 'moodboard.keywords') ?? [],
-      visual_references: validateStringArray(raw?.moodboard?.visual_references, 'moodboard.visual_references') ?? [],
-      photography_style: validateString(raw?.moodboard?.photography_style, 'moodboard.photography_style'),
-      layout_style: validateString(raw?.moodboard?.layout_style, 'moodboard.layout_style'),
-      texture_and_materials: validateStringArray(raw?.moodboard?.texture_and_materials, 'moodboard.texture_and_materials') ?? [],
+      keywords: validateStringArray(readPath(raw, 'moodboard.keywords'), 'moodboard.keywords') ?? [],
+      visual_references: validateStringArray(readPath(raw, 'moodboard.visual_references'), 'moodboard.visual_references') ?? [],
+      photography_style: validateString(readPath(raw, 'moodboard.photography_style'), 'moodboard.photography_style'),
+      layout_style: validateString(readPath(raw, 'moodboard.layout_style'), 'moodboard.layout_style'),
+      texture_and_materials: validateStringArray(readPath(raw, 'moodboard.texture_and_materials'), 'moodboard.texture_and_materials') ?? [],
     },
   };
 }
 
-function validateDeliverablesStage(raw: any) {
+function validateDeliverablesStage(raw: unknown) {
   return {
-    deliverables: validateStringArray(raw?.deliverables, 'deliverables') ?? [],
-    portfolio_project_ideas: validateStringArray(raw?.portfolio_project_ideas, 'portfolio_project_ideas') ?? [],
+    deliverables: validateStringArray(readPath(raw, 'deliverables'), 'deliverables') ?? [],
+    portfolio_project_ideas: validateStringArray(readPath(raw, 'portfolio_project_ideas'), 'portfolio_project_ideas') ?? [],
   };
 }
 
-function validateCoreStage(raw: any) {
+function validateCoreStage(raw: unknown) {
   return {
     ...validateBriefingStage(raw),
     ...validateBrandStage(raw),
   };
 }
 
-function validateProductionStage(raw: any) {
+function validateProductionStage(raw: unknown) {
   return {
     ...validateMoodboardStage(raw),
     ...validateDeliverablesStage(raw),
@@ -773,7 +801,7 @@ function appendExecutionContext(prompt: string, context: string, language: strin
   return `${prompt.trim()}\n\n${requiredContextLabel(language)}: ${compactContext}`;
 }
 
-function optionalString(val: any): string | undefined {
+function optionalString(val: unknown): string | undefined {
   if (typeof val !== 'string') {
     return undefined;
   }
@@ -906,17 +934,18 @@ function buildDefaultPrompts(briefing: BriefingData, language: string): Briefing
   };
 }
 
-function normalizePrompts(rawPrompts: any, briefing: BriefingData, language: string): BriefingData['prompts'] {
+function normalizePrompts(rawPrompts: unknown, briefing: BriefingData, language: string): BriefingData['prompts'] {
   const defaults = buildDefaultPrompts(briefing, language);
+  const record = asRecord(rawPrompts);
 
   return {
-    landing_page_prompt: optionalString(rawPrompts?.landing_page_prompt) || defaults.landing_page_prompt,
-    logo_prompt: optionalString(rawPrompts?.logo_prompt) || defaults.logo_prompt,
-    logo_concept_board_prompt: optionalString(rawPrompts?.logo_concept_board_prompt) || defaults.logo_concept_board_prompt,
-    moodboard_image_prompt: optionalString(rawPrompts?.moodboard_image_prompt) || defaults.moodboard_image_prompt,
-    social_media_prompt: optionalString(rawPrompts?.social_media_prompt) || defaults.social_media_prompt,
-    lovable_or_cursor_prompt: optionalString(rawPrompts?.lovable_or_cursor_prompt) || defaults.lovable_or_cursor_prompt,
-    master_execution_prompt: optionalString(rawPrompts?.master_execution_prompt) || defaults.master_execution_prompt,
+    landing_page_prompt: optionalString(record?.landing_page_prompt) || defaults.landing_page_prompt,
+    logo_prompt: optionalString(record?.logo_prompt) || defaults.logo_prompt,
+    logo_concept_board_prompt: optionalString(record?.logo_concept_board_prompt) || defaults.logo_concept_board_prompt,
+    moodboard_image_prompt: optionalString(record?.moodboard_image_prompt) || defaults.moodboard_image_prompt,
+    social_media_prompt: optionalString(record?.social_media_prompt) || defaults.social_media_prompt,
+    lovable_or_cursor_prompt: optionalString(record?.lovable_or_cursor_prompt) || defaults.lovable_or_cursor_prompt,
+    master_execution_prompt: optionalString(record?.master_execution_prompt) || defaults.master_execution_prompt,
   };
 }
 
@@ -1192,59 +1221,63 @@ function buildExistingBriefingInstruction(briefing: BriefingData, language: stri
   return `\nContexto existente do briefing para preservar como fonte da verdade ao regenerar prompts:\n${context}\n`;
 }
 
-function optionalStringOr(fallback: () => string, val: any, path: string): string {
+function optionalStringOr(fallback: () => string, val: unknown): string {
   return optionalString(val) ?? fallback();
 }
 
-function validateBriefing(raw: any, language: string, fallback?: BriefingData): BriefingData {
-  const client = fallback?.client;
-  const defaultAgentSkills = fallback?.agent_skills ?? buildDefaultAgentSkills(
-    { client: { name: validateString(client?.name, 'client.name'), segment: '', location: '', short_description: '', brand_story: '', main_problem: '', business_goal: '' } } as BriefingData,
+export function validateBriefing(raw: unknown, language: string, fallback?: BriefingData): BriefingData {
+  const clientName =
+    optionalString(readPath(raw, 'client.name'))
+    ?? optionalString(fallback?.client.name)
+    ?? 'Briefing';
+
+  const defaultAgentSkills = buildDefaultAgentSkills(
+    { client: { name: clientName, segment: '', location: '', short_description: '', brand_story: '', main_problem: '', business_goal: '' } } as BriefingData,
     language
   );
   const briefing: BriefingData = {
     client: {
-      name: optionalStringOr(() => validateString(client?.name, 'client.name'), raw?.client?.name, 'client.name'),
-      segment: optionalStringOr(() => validateString(client?.segment, 'client.segment'), raw?.client?.segment, 'client.segment'),
-      location: optionalStringOr(() => validateString(client?.location, 'client.location'), raw?.client?.location, 'client.location'),
-      short_description: optionalStringOr(() => validateString(client?.short_description, 'client.short_description'), raw?.client?.short_description, 'client.short_description'),
-      brand_story: optionalStringOr(() => validateString(client?.brand_story, 'client.brand_story'), raw?.client?.brand_story, 'client.brand_story'),
-      main_problem: optionalStringOr(() => validateString(client?.main_problem, 'client.main_problem'), raw?.client?.main_problem, 'client.main_problem'),
-      business_goal: optionalStringOr(() => validateString(client?.business_goal, 'client.business_goal'), raw?.client?.business_goal, 'client.business_goal'),
+      name: optionalStringOr(() => validateString(fallback?.client.name, 'client.name'), readPath(raw, 'client.name')),
+      segment: optionalStringOr(() => validateString(fallback?.client.segment, 'client.segment'), readPath(raw, 'client.segment')),
+      location: optionalStringOr(() => validateString(fallback?.client.location, 'client.location'), readPath(raw, 'client.location')),
+      short_description: optionalStringOr(() => validateString(fallback?.client.short_description, 'client.short_description'), readPath(raw, 'client.short_description')),
+      brand_story: optionalStringOr(() => validateString(fallback?.client.brand_story, 'client.brand_story'), readPath(raw, 'client.brand_story')),
+      main_problem: optionalStringOr(() => validateString(fallback?.client.main_problem, 'client.main_problem'), readPath(raw, 'client.main_problem')),
+      business_goal: optionalStringOr(() => validateString(fallback?.client.business_goal, 'client.business_goal'), readPath(raw, 'client.business_goal')),
     },
     audience: {
-      primary_audience: optionalStringOr(() => validateString(fallback?.audience.primary_audience, 'audience.primary_audience'), raw?.audience?.primary_audience, 'audience.primary_audience'),
-      pain_points: validateStringArray(raw?.audience?.pain_points, 'audience.pain_points') ?? fallback?.audience.pain_points ?? [],
-      desires: validateStringArray(raw?.audience?.desires, 'audience.desires') ?? fallback?.audience.desires ?? [],
+      primary_audience: optionalStringOr(() => validateString(fallback?.audience.primary_audience, 'audience.primary_audience'), readPath(raw, 'audience.primary_audience')),
+      pain_points: validateStringArray(readPath(raw, 'audience.pain_points'), 'audience.pain_points') ?? fallback?.audience.pain_points ?? [],
+      desires: validateStringArray(readPath(raw, 'audience.desires'), 'audience.desires') ?? fallback?.audience.desires ?? [],
     },
     brand: {
-      personality: validateStringArray(raw?.brand?.personality, 'brand.personality') ?? fallback?.brand.personality ?? [],
-      tone_of_voice: optionalStringOr(() => validateString(fallback?.brand.tone_of_voice, 'brand.tone_of_voice'), raw?.brand?.tone_of_voice, 'brand.tone_of_voice'),
-      positioning: optionalStringOr(() => validateString(fallback?.brand.positioning, 'brand.positioning'), raw?.brand?.positioning, 'brand.positioning'),
-      tagline: optionalStringOr(() => validateString(fallback?.brand.tagline, 'brand.tagline'), raw?.brand?.tagline, 'brand.tagline'),
+      personality: validateStringArray(readPath(raw, 'brand.personality'), 'brand.personality') ?? fallback?.brand.personality ?? [],
+      tone_of_voice: optionalStringOr(() => validateString(fallback?.brand.tone_of_voice, 'brand.tone_of_voice'), readPath(raw, 'brand.tone_of_voice')),
+      positioning: optionalStringOr(() => validateString(fallback?.brand.positioning, 'brand.positioning'), readPath(raw, 'brand.positioning')),
+      tagline: optionalStringOr(() => validateString(fallback?.brand.tagline, 'brand.tagline'), readPath(raw, 'brand.tagline')),
     },
     visual_identity: {
-      logo_direction: optionalStringOr(() => validateString(fallback?.visual_identity.logo_direction, 'visual_identity.logo_direction'), raw?.visual_identity?.logo_direction, 'visual_identity.logo_direction'),
+      logo_direction: optionalStringOr(() => validateString(fallback?.visual_identity.logo_direction, 'visual_identity.logo_direction'), readPath(raw, 'visual_identity.logo_direction')),
       logo_concept_board: validateLogoConceptBoard(
-        raw?.visual_identity?.logo_concept_board,
+        readPath(raw, 'visual_identity.logo_concept_board'),
         'visual_identity.logo_concept_board'
       ) ?? fallback?.visual_identity.logo_concept_board,
-      color_palette: validateColorPalette(raw?.visual_identity?.color_palette, 'visual_identity.color_palette') ?? fallback?.visual_identity.color_palette ?? [],
+      color_palette: validateColorPalette(readPath(raw, 'visual_identity.color_palette'), 'visual_identity.color_palette') ?? fallback?.visual_identity.color_palette ?? [],
       typography: {
-        heading: optionalStringOr(() => validateString(fallback?.visual_identity.typography.heading, 'visual_identity.typography.heading'), raw?.visual_identity?.typography?.heading, 'visual_identity.typography.heading'),
-        body: optionalStringOr(() => validateString(fallback?.visual_identity.typography.body, 'visual_identity.typography.body'), raw?.visual_identity?.typography?.body, 'visual_identity.typography.body'),
-        accent: optionalStringOr(() => validateString(fallback?.visual_identity.typography.accent, 'visual_identity.typography.accent'), raw?.visual_identity?.typography?.accent, 'visual_identity.typography.accent'),
+        heading: optionalStringOr(() => validateString(fallback?.visual_identity.typography.heading, 'visual_identity.typography.heading'), readPath(raw, 'visual_identity.typography.heading')),
+        body: optionalStringOr(() => validateString(fallback?.visual_identity.typography.body, 'visual_identity.typography.body'), readPath(raw, 'visual_identity.typography.body')),
+        accent: optionalStringOr(() => validateString(fallback?.visual_identity.typography.accent, 'visual_identity.typography.accent'), readPath(raw, 'visual_identity.typography.accent')),
       },
     },
     moodboard: {
-      keywords: validateStringArray(raw?.moodboard?.keywords, 'moodboard.keywords') ?? fallback?.moodboard.keywords ?? [],
-      visual_references: validateStringArray(raw?.moodboard?.visual_references, 'moodboard.visual_references') ?? fallback?.moodboard.visual_references ?? [],
-      photography_style: optionalStringOr(() => validateString(fallback?.moodboard.photography_style, 'moodboard.photography_style'), raw?.moodboard?.photography_style, 'moodboard.photography_style'),
-      layout_style: optionalStringOr(() => validateString(fallback?.moodboard.layout_style, 'moodboard.layout_style'), raw?.moodboard?.layout_style, 'moodboard.layout_style'),
-      texture_and_materials: validateStringArray(raw?.moodboard?.texture_and_materials, 'moodboard.texture_and_materials') ?? fallback?.moodboard.texture_and_materials ?? [],
+      keywords: validateStringArray(readPath(raw, 'moodboard.keywords'), 'moodboard.keywords') ?? fallback?.moodboard.keywords ?? [],
+      visual_references: validateStringArray(readPath(raw, 'moodboard.visual_references'), 'moodboard.visual_references') ?? fallback?.moodboard.visual_references ?? [],
+      photography_style: optionalStringOr(() => validateString(fallback?.moodboard.photography_style, 'moodboard.photography_style'), readPath(raw, 'moodboard.photography_style')),
+      layout_style: optionalStringOr(() => validateString(fallback?.moodboard.layout_style, 'moodboard.layout_style'), readPath(raw, 'moodboard.layout_style')),
+      texture_and_materials: validateStringArray(readPath(raw, 'moodboard.texture_and_materials'), 'moodboard.texture_and_materials') ?? fallback?.moodboard.texture_and_materials ?? [],
     },
-    deliverables: validateStringArray(raw?.deliverables, 'deliverables') ?? fallback?.deliverables ?? [],
-    portfolio_project_ideas: validateStringArray(raw?.portfolio_project_ideas, 'portfolio_project_ideas') ?? fallback?.portfolio_project_ideas ?? [],
+    deliverables: validateStringArray(readPath(raw, 'deliverables'), 'deliverables') ?? fallback?.deliverables ?? [],
+    portfolio_project_ideas: validateStringArray(readPath(raw, 'portfolio_project_ideas'), 'portfolio_project_ideas') ?? fallback?.portfolio_project_ideas ?? [],
     prompts: {
       landing_page_prompt: '',
       logo_prompt: '',
@@ -1255,17 +1288,17 @@ function validateBriefing(raw: any, language: string, fallback?: BriefingData): 
       master_execution_prompt: '',
     },
     agent_skills: {
-      briefing: validateAgentSkill(raw?.agent_skills?.briefing, 'agent_skills.briefing') ?? fallback?.agent_skills.briefing ?? defaultAgentSkills.briefing,
-      brand: validateAgentSkill(raw?.agent_skills?.brand, 'agent_skills.brand') ?? fallback?.agent_skills.brand ?? defaultAgentSkills.brand,
-      moodboard: validateAgentSkill(raw?.agent_skills?.moodboard, 'agent_skills.moodboard') ?? fallback?.agent_skills.moodboard ?? defaultAgentSkills.moodboard,
-      prompts: validateAgentSkill(raw?.agent_skills?.prompts, 'agent_skills.prompts') ?? fallback?.agent_skills.prompts ?? defaultAgentSkills.prompts,
-      deliverables: validateAgentSkill(raw?.agent_skills?.deliverables, 'agent_skills.deliverables') ?? fallback?.agent_skills.deliverables ?? defaultAgentSkills.deliverables,
+      briefing: validateAgentSkill(readPath(raw, 'agent_skills.briefing'), 'agent_skills.briefing') ?? fallback?.agent_skills.briefing ?? defaultAgentSkills.briefing,
+      brand: validateAgentSkill(readPath(raw, 'agent_skills.brand'), 'agent_skills.brand') ?? fallback?.agent_skills.brand ?? defaultAgentSkills.brand,
+      moodboard: validateAgentSkill(readPath(raw, 'agent_skills.moodboard'), 'agent_skills.moodboard') ?? fallback?.agent_skills.moodboard ?? defaultAgentSkills.moodboard,
+      prompts: validateAgentSkill(readPath(raw, 'agent_skills.prompts'), 'agent_skills.prompts') ?? fallback?.agent_skills.prompts ?? defaultAgentSkills.prompts,
+      deliverables: validateAgentSkill(readPath(raw, 'agent_skills.deliverables'), 'agent_skills.deliverables') ?? fallback?.agent_skills.deliverables ?? defaultAgentSkills.deliverables,
     },
   };
 
   return {
     ...briefing,
-    prompts: normalizePrompts(raw?.prompts, briefing, language),
+    prompts: normalizePrompts(readPath(raw, 'prompts'), briefing, language),
   };
 }
 
@@ -1468,7 +1501,7 @@ async function generateBriefingInStages(
     await requestStageJson(config, buildProductionStageMessage(params, langName, core), 2600)
   );
 
-  let briefing: BriefingData = {
+  const briefing: BriefingData = {
     ...core,
     ...production,
     prompts: {

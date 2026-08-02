@@ -5,7 +5,11 @@
 [![CI](https://github.com/fernandooliveiradev/briefforge/actions/workflows/ci.yml/badge.svg)](https://github.com/fernandooliveiradev/briefforge/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3-38BDF8)](https://tailwindcss.com/)
 [![Node.js](https://img.shields.io/badge/Node.js-24%2B-43853d)](package.json)
+[![pnpm](https://img.shields.io/badge/pnpm-10-F69220)](package.json)
 
 BriefForge generates fictional client briefings for portfolio projects. It creates a complete project package with briefing, brand direction, moodboard notes, execution prompts, deliverables, and stage-specific agent skills.
 
@@ -47,6 +51,16 @@ BriefForge is designed as a private creative operations tool: generate a fiction
 - Zod
 - Native SQLite via `node:sqlite`
 - OpenAI API, DeepSeek API, or OpenRouter API
+
+## Architecture
+
+BriefForge is built around a few backend decisions that keep AI generation reliable and the app local-first:
+
+- **Two-stage AI generation.** A new briefing is produced with two smaller provider calls — one for strategy/visual identity and one for moodboard/deliverables — instead of one huge response. This lowers timeout and invalid-JSON failure rates.
+- **Local prompt/skills generation.** Execution prompts and stage-specific agent skills are built locally from the validated briefing. This removes the most verbose AI call and avoids failing late in the pipeline.
+- **Strict output validation.** Provider JSON is checked against an explicit schema (required fields, array bounds, hex palette format) and falls back to safe defaults before anything is persisted. Partial responses are tolerated when regenerating a single stage.
+- **Robust local storage.** SQLite in WAL mode with foreign keys, a busy timeout, explicit transactions, parameterized queries, indexed filters, and versioned schema migrations via `PRAGMA user_version`.
+- **Security by default.** Optional signed, expiring access sessions (HMAC-SHA256), timing-safe password comparison, in-memory rate limiting behind a small adapter ready for Redis/Upstash, and global browser security headers including CSP.
 
 ## Requirements
 

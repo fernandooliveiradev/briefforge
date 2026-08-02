@@ -82,7 +82,7 @@ export default function DeleteProjectButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Deletar briefing?</AlertDialogTitle>
           <AlertDialogDescription>
-            Isso vai remover "{projectName}" do dashboard. Esta ação não pode ser desfeita.
+            Isso vai remover &quot;{projectName}&quot; do dashboard. Esta ação não pode ser desfeita.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

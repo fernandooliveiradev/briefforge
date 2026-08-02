@@ -59,6 +59,7 @@ You can override a single provider with `OPENAI_TIMEOUT_MS`, `DEEPSEEK_TIMEOUT_M
 - The selected provider is sent with the briefing creation request.
 - New briefings use two AI calls: one for strategy/visual identity and one for moodboard/deliverables. This avoids one huge response without creating too many slow provider round trips.
 - Execution prompts and agent skills are generated locally from the validated briefing, which removes the most verbose AI call and keeps the project from failing late in the process.
+- Provider JSON is validated against an explicit schema before persisting. When regenerating a single stage, the response may be partial: missing fields fall back to the current briefing instead of failing the whole update.
 - BriefForge saves the provider and model as `openai:model`, `deepseek:model`, or `openrouter:model` in the project record.
 - Stage regeneration follows the provider saved on that briefing.
 - If the selected provider has no API key or returns invalid data, the project or stage update is not persisted.

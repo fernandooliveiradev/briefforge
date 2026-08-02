@@ -31,6 +31,25 @@ const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite') as Sqlite
 
 let sqlite: SqliteDatabase | null = null;
 
+let testDbPath: string | null = null;
+
+export function setDatabasePathForTests(dbPath: string): void {
+  testDbPath = dbPath;
+}
+
+export function resetDatabaseForTests(): void {
+  if (sqlite) {
+    try {
+      sqlite.exec('PRAGMA wal_checkpoint(TRUNCATE)');
+    } catch {
+      // Best-effort flush before closing; the DB may already be closed.
+    }
+    (sqlite as unknown as { close?: () => void }).close?.();
+  }
+  sqlite = null;
+  testDbPath = null;
+}
+
 export class ProjectDatabaseError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
@@ -256,10 +275,12 @@ function getDb(): SqliteDatabase {
     return sqlite;
   }
 
-  ensureDataDir();
+  if (!testDbPath) {
+    ensureDataDir();
+  }
 
   try {
-    sqlite = new DatabaseSync(DB_PATH);
+    sqlite = new DatabaseSync(testDbPath ?? DB_PATH);
     sqlite.exec(`
       PRAGMA journal_mode = WAL;
       PRAGMA synchronous = NORMAL;

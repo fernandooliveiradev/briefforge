@@ -8,6 +8,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- Automated tests (Vitest) for the AI output validation layer, rate limiting, request body parsing, access token signing, and URL/id helpers.
+- ESLint with `next/core-web-vitals` and `next/typescript` rules, plus `lint` and `test` scripts wired into CI.
+
+## [0.2.0] - 2026-08-01
+
+### Added
+
 - Open source project metadata, contribution docs, security policy, issue templates, pull request template, and CI workflow.
 - Runtime check for supported Node.js versions.
 - Local SQLite persistence using Node's native `node:sqlite` module.
@@ -31,6 +38,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - README now documents the real project, maintainer, setup, scripts, storage, and security notes.
 - AI provider configuration is documented in `docs/AI_PROVIDERS.md`.
 - Updated Next.js and Tailwind CSS to patched versions and removed the unused chart/Recharts dependency.
+- Stage regeneration now tolerates partial AI responses: missing fields fall back to the current briefing instead of failing the whole update.
+- Content Security Policy `connect-src` now allows custom OpenAI/DeepSeek/OpenRouter base URLs from the environment.
+- Removed 36 unused shadcn/ui components and their now-orphaned dependencies.
 
 ### Removed
 
@@ -38,6 +48,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Legacy JSON database storage.
 - Legacy local database encryption secret.
 - Scaffold-only development dependency and webpack hook.
+- `next-themes` and the unused theme provider (the app is light-only).
 
 ## [0.1.0] - 2026-05-25
 
