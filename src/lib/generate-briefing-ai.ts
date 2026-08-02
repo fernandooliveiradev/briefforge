@@ -208,6 +208,21 @@ const SUPPORTED_LANGUAGES: Record<string, string> = {
   ingles: 'English',
 };
 
+const PROJECT_GOAL_INSTRUCTIONS: Record<string, string> = {
+  landing_page:
+    'Focus the deliverables and prompts on a high-converting landing page: hero, proof, services/value, audience pains and desires, and a clear conversion CTA.',
+  identidade_visual:
+    'Focus the deliverables and prompts on a complete visual identity system: logo concept board, logo variations, color palette, typography sheet, and brand usage guide.',
+  ecommerce:
+    'Focus the deliverables and prompts on an online store: product catalog, category and product pages, cart and checkout flow, and trust/conversion elements.',
+  app:
+    'Focus the deliverables and prompts on a mobile or web app: onboarding, key screens, UX flows, and UI kit, rather than a single landing page.',
+  social_media:
+    'Focus the deliverables and prompts on a social media creative system: content pillars, post formats, story/static templates, and a posting guide.',
+  apresentacao_comercial:
+    'Focus the deliverables and prompts on a commercial presentation/deck: narrative, slides structure, data visuals, and a clean brand-consistent layout.',
+};
+
 const SYSTEM_PROMPT = `You are a creative brand strategist. Generate a complete fictional brand briefing in valid JSON.
 
 CRITICAL — every field below MUST exist and be non-empty:
@@ -295,6 +310,7 @@ For typography, use Google Fonts. VARY widely per visual style:
 - Tech: JetBrains Mono, IBM Plex Sans, Space Mono, Fira Code, Geist Mono
 - Organic: Amatic SC, Caveat, Kalam, Gaegu, Shadows Into Light
 NEVER default to Playfair Display unless the style is Editorial or Luxury. Match font personality to visual style.
+The visual style value "divertido" maps to the Playful font group above (Fredoka, Baloo 2, Nunito, Quicksand, Lilita One). Treat it exactly like "Playful".
 Color palette must be cohesive — choose hex codes that work together for the given visual style.
 Make the brand feel like a real business, not generic placeholders.
 Vary the client location. Do not default to São Paulo, SP, Brazil. Choose a plausible city/state/country for the segment and language, including different Brazilian regions for Portuguese outputs and international locations for English outputs when appropriate. Use São Paulo only when it is specifically justified by the generated business context.
@@ -903,13 +919,14 @@ function buildDeliverablesContext(briefing: BriefingData, language: string): str
   ].join('\n');
 }
 
-function buildDefaultPrompts(briefing: BriefingData, language: string): BriefingData['prompts'] {
+function buildDefaultPrompts(briefing: BriefingData, language: string, goal: string): BriefingData['prompts'] {
   const { client, brand, visual_identity, moodboard } = briefing;
   const board = visual_identity.logo_concept_board;
   const boardSections = listItems(board?.board_sections);
   const variations = listItems(board?.required_variations);
   const palette = paletteSummary(briefing);
   const typography = typographySummary(briefing, language);
+  const goalText = PROJECT_GOAL_INSTRUCTIONS[goal] || PROJECT_GOAL_INSTRUCTIONS.landing_page;
 
   if (language === 'ingles') {
     return {
@@ -918,8 +935,8 @@ function buildDefaultPrompts(briefing: BriefingData, language: string): Briefing
       logo_concept_board_prompt: `Create a complete visual identity board for ${client.name}. Include primary logo, emblem/symbol, secondary version, monochrome version, color variations, palette with names and hex values, typography samples, usage guide, and symbol rationale. Use sections: ${boardSections}. Required variations: ${variations}. Present everything in a premium neutral layout.`,
       moodboard_image_prompt: `Generate a premium moodboard for ${client.name} using the keywords ${listItems(moodboard.keywords)}. Combine ${listItems(moodboard.visual_references)}, ${moodboard.photography_style}, ${moodboard.layout_style}, and materials such as ${listItems(moodboard.texture_and_materials)}. Keep the composition refined, coherent, and brand-ready.`,
       social_media_prompt: `Create a social media creative system for ${client.name}. Use the brand personality ${listItems(brand.personality)}, the positioning "${brand.positioning}", the tagline "${brand.tagline}", the palette ${palette}, and clear layouts for awareness, authority, offer and testimonial posts.`,
-      lovable_or_cursor_prompt: `Build a polished web implementation for ${client.name}. Translate the briefing, brand positioning, visual identity, moodboard and deliverables into a responsive interface with reusable sections, refined typography, strong CTAs, accessible contrast, and production-quality spacing.`,
-      master_execution_prompt: `For ${client.name}, execute the full brand and digital presentation package. Preserve the business goal "${client.business_goal}", solve "${client.main_problem}", speak to ${briefing.audience.primary_audience}, and express the brand as ${listItems(brand.personality)} with a ${brand.tone_of_voice} voice. Deliver the landing page direction, logo system, visual identity board, moodboard, social media system, and implementation prompt with consistency across palette, typography, symbols and use cases.`,
+      lovable_or_cursor_prompt: `Build a polished ${goal === 'app' ? 'mobile app with onboarding, key screens, and a UI kit' : goal === 'ecommerce' ? 'online store with product catalog, category/product pages, and checkout flow' : goal === 'social_media' ? 'social media presentation and content templates' : goal === 'apresentacao_comercial' ? 'commercial deck with narrative slides and data visuals' : 'landing page'} for ${client.name}. Translate the briefing, brand positioning, visual identity, moodboard and deliverables into a ${goal === 'app' ? 'responsive app interface' : 'polished responsive interface'} with reusable sections, refined typography, strong CTAs, accessible contrast, and production-quality spacing. ${goalText}`,
+      master_execution_prompt: `For ${client.name}, execute the full brand and digital presentation package. Preserve the business goal "${client.business_goal}", solve "${client.main_problem}", speak to ${briefing.audience.primary_audience}, and express the brand as ${listItems(brand.personality)} with a ${brand.tone_of_voice} voice. Deliver the logo system, visual identity board, moodboard, social media system, and the execution prompt aligned to the goal: ${goalText} with consistency across palette, typography, symbols and use cases.`,
     };
   }
 
@@ -929,13 +946,13 @@ function buildDefaultPrompts(briefing: BriefingData, language: string): Briefing
     logo_concept_board_prompt: `Crie uma prancha completa de identidade visual para ${client.name}. Inclua logo principal, emblema/símbolo, versão secundária, versão monocromática, variações de cor, paleta com nomes e hex, amostras tipográficas, guia de uso e justificativa dos símbolos. Use as seções: ${boardSections}. Variações obrigatórias: ${variations}. Apresente tudo em layout premium com fundo neutro.`,
     moodboard_image_prompt: `Gere um moodboard premium para ${client.name} usando as palavras-chave ${listItems(moodboard.keywords)}. Combine ${listItems(moodboard.visual_references)}, ${moodboard.photography_style}, ${moodboard.layout_style} e materiais como ${listItems(moodboard.texture_and_materials)}. Mantenha composição refinada, coerente e pronta para guiar a marca.`,
     social_media_prompt: `Crie um sistema de peças para redes sociais de ${client.name}. Use a personalidade ${listItems(brand.personality)}, o posicionamento "${brand.positioning}", a tagline "${brand.tagline}", a paleta ${palette} e layouts claros para awareness, autoridade, oferta e depoimentos.`,
-    lovable_or_cursor_prompt: `Construa uma implementação web refinada para ${client.name}. Traduza briefing, posicionamento, identidade visual, moodboard e entregáveis em uma interface responsiva com seções reutilizáveis, tipografia premium, CTAs fortes, contraste acessível e espaçamento de qualidade de produção.`,
-    master_execution_prompt: `Para ${client.name}, execute o pacote completo de marca e apresentação digital. Preserve o objetivo de negócio "${client.business_goal}", resolva "${client.main_problem}", fale com ${briefing.audience.primary_audience} e expresse a marca como ${listItems(brand.personality)} em tom ${brand.tone_of_voice}. Entregue direção de landing page, sistema de logo, prancha de identidade visual, moodboard, sistema de redes sociais e prompt de implementação com consistência entre paleta, tipografia, símbolos e aplicações.`,
+    lovable_or_cursor_prompt: `Construa um(a) ${goal === 'app' ? 'aplicativo mobile com onboarding, telas principais e UI kit' : goal === 'ecommerce' ? 'e-commerce com catálogo de produtos, páginas de categoria/produto e fluxo de checkout' : goal === 'social_media' ? 'apresentação de redes sociais e templates de conteúdo' : goal === 'apresentacao_comercial' ? 'deck comercial com slides narrativos e dados visuais' : 'landing page'} para ${client.name}. Traduza briefing, posicionamento, identidade visual, moodboard e entregáveis em uma ${goal === 'app' ? 'interface de app responsiva' : 'interface responsiva refinada'} com seções reutilizáveis, tipografia premium, CTAs fortes, contraste acessível e espaçamento de qualidade de produção. ${goalText}`,
+    master_execution_prompt: `Para ${client.name}, execute o pacote completo de marca e apresentação digital. Preserve o objetivo de negócio "${client.business_goal}", resolva "${client.main_problem}", fale com ${briefing.audience.primary_audience} e expresse a marca como ${listItems(brand.personality)} em tom ${brand.tone_of_voice}. Entregue o sistema de logo, prancha de identidade visual, moodboard, sistema de redes sociais e o prompt de execução alinhado ao objetivo: ${goalText}, com consistência entre paleta, tipografia, símbolos e aplicações.`,
   };
 }
 
-function normalizePrompts(rawPrompts: unknown, briefing: BriefingData, language: string): BriefingData['prompts'] {
-  const defaults = buildDefaultPrompts(briefing, language);
+function normalizePrompts(rawPrompts: unknown, briefing: BriefingData, language: string, goal: string): BriefingData['prompts'] {
+  const defaults = buildDefaultPrompts(briefing, language, goal);
   const record = asRecord(rawPrompts);
 
   return {
@@ -1225,7 +1242,7 @@ function optionalStringOr(fallback: () => string, val: unknown): string {
   return optionalString(val) ?? fallback();
 }
 
-export function validateBriefing(raw: unknown, language: string, fallback?: BriefingData): BriefingData {
+export function validateBriefing(raw: unknown, language: string, fallback?: BriefingData, goal?: string): BriefingData {
   const clientName =
     optionalString(readPath(raw, 'client.name'))
     ?? optionalString(fallback?.client.name)
@@ -1298,7 +1315,7 @@ export function validateBriefing(raw: unknown, language: string, fallback?: Brie
 
   return {
     ...briefing,
-    prompts: normalizePrompts(readPath(raw, 'prompts'), briefing, language),
+    prompts: normalizePrompts(readPath(raw, 'prompts'), briefing, language, goal ?? 'landing_page'),
   };
 }
 
@@ -1518,7 +1535,7 @@ async function generateBriefingInStages(
 
   return enrichBriefingPrompts({
     ...briefing,
-    prompts: buildDefaultPrompts(briefing, params.language),
+    prompts: buildDefaultPrompts(briefing, params.language, params.project_goal),
     agent_skills: buildDefaultAgentSkills(briefing, params.language),
   }, params.language);
 }
@@ -1537,6 +1554,7 @@ export async function generateBriefingAI(params: GenerateBriefingParams): Promis
 
   const langName = SUPPORTED_LANGUAGES[language] || 'Portuguese (Brazilian)';
   const complexityInstruction = COMPLEXITY_INSTRUCTIONS[complexity] || COMPLEXITY_INSTRUCTIONS.completo;
+  const goalInstruction = PROJECT_GOAL_INSTRUCTIONS[project_goal] || PROJECT_GOAL_INSTRUCTIONS.landing_page;
   const focusInstruction = focusStage
     ? `\nRegeneration focus: ${REGENERATION_STAGE_INSTRUCTIONS[focusStage]}`
     : '';
@@ -1552,10 +1570,12 @@ export async function generateBriefingAI(params: GenerateBriefingParams): Promis
 - Complexity: ${complexity}
 
 ${complexityInstruction}
+${goalInstruction}
 ${focusInstruction}
 ${existingBriefingInstruction}
 
 Make prompts production-ready, with enough context for another AI agent to execute without reading the UI tabs manually.
+The selected project goal is "${project_goal}". Make the execution prompts, deliverables and portfolio ideas match that goal. Do not default to a landing page when the goal is an app, ecommerce store, social media system, or commercial presentation.
 Make deliverables concrete enough for a designer/developer to know exactly what files, formats and visual boards must be produced.
 Use the Agent Skills convention from agentskills.io: skill names in lowercase kebab-case, specific descriptions, concise activation criteria, concrete step-by-step instructions, and quality checks.
 Do not default the client location to São Paulo, SP, Brazil. Vary the generated location across plausible cities and regions for the chosen business type and language.
@@ -1599,7 +1619,8 @@ Compact retry instruction: the previous response was too long or not valid JSON.
       const validated = validateBriefing(
         await requestBriefingJson(config, attempt.message, attempt.maxTokens),
         language,
-        currentBriefing
+        currentBriefing,
+        project_goal
       );
       return applyPromptContext(validated, currentBriefing ?? validated, language);
     } catch (error) {

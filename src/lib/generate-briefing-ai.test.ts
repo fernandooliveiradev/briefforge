@@ -157,6 +157,18 @@ describe("validateBriefing", () => {
     (bad.client as Record<string, unknown>).name = "";
     expect(() => validateBriefing(bad, "portugues")).toThrow(/client.name/);
   });
+
+  it("conditions the fallback implementation prompt on the project goal", () => {
+    const withoutPrompts = structuredClone(validPayload);
+    delete withoutPrompts.prompts;
+
+    const app = validateBriefing(withoutPrompts, "portugues", undefined, "app");
+    const landing = validateBriefing(withoutPrompts, "portugues", undefined, "landing_page");
+
+    expect(app.prompts.lovable_or_cursor_prompt).toMatch(/aplicativo mobile/);
+    expect(landing.prompts.lovable_or_cursor_prompt).toMatch(/landing page/);
+    expect(app.prompts.lovable_or_cursor_prompt).not.toBe(landing.prompts.lovable_or_cursor_prompt);
+  });
 });
 
 describe("getAiGenerationPublicMessage", () => {
