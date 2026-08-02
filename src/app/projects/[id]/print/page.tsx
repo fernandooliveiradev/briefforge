@@ -42,11 +42,11 @@ export default async function PrintProjectPage({
         <div className="flex items-center justify-between gap-3 print:hidden">
           <div>
             <h1 className="font-serif text-3xl font-bold">{row.client_name}</h1>
-            <p className="text-sm text-neutral-500">Layout preparado para salvar como PDF pelo navegador.</p>
+            <p className="text-sm text-muted-foreground">Layout preparado para salvar como PDF pelo navegador.</p>
           </div>
           <PrintButton />
         </div>
-        <div className="whitespace-pre-wrap rounded-2xl border border-neutral-200 bg-white p-6 font-sans text-sm leading-7 text-neutral-900 print:border-0 print:p-0">
+        <div className="whitespace-pre-wrap rounded-2xl border border-border bg-card p-6 font-sans text-sm leading-7 text-foreground print:border-0 print:p-0">
           {markdown}
         </div>
       </article>

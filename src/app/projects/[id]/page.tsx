@@ -70,8 +70,8 @@ export default async function ProjectDetailPage({
         </div>
       </div>
       {versions.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-neutral-200 bg-white p-3">
-          <span className="text-sm font-medium text-neutral-700">Versões:</span>
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-3">
+          <span className="text-sm font-medium text-muted-foreground">Versões:</span>
           {versions.map((version) => (
             <Link key={version.id} href={`/projects/${version.id}`}>
               <Button

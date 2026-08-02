@@ -73,13 +73,13 @@ export function ProjectActions({ projectId, shareId, isPublic }: ProjectActionsP
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <Button asChild variant="outline" size="sm" className="rounded-xl bg-white">
+      <Button asChild variant="outline" size="sm" className="rounded-xl">
         <a href={`/api/projects/${projectId}/export/markdown`}>
           <Download className="h-4 w-4" />
           Markdown
         </a>
       </Button>
-      <Button asChild variant="outline" size="sm" className="rounded-xl bg-white">
+      <Button asChild variant="outline" size="sm" className="rounded-xl">
         <Link href={`/projects/${projectId}/print`} target="_blank">
           <ExternalLink className="h-4 w-4" />
           PDF
@@ -89,7 +89,7 @@ export function ProjectActions({ projectId, shareId, isPublic }: ProjectActionsP
         type="button"
         variant="outline"
         size="sm"
-        className="rounded-xl bg-white"
+        className="rounded-xl"
         onClick={duplicate}
         disabled={pending}
       >

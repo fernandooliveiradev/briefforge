@@ -27,9 +27,9 @@ export default async function PublicSharePage({
 
     return (
       <div className="space-y-6">
-        <div className="rounded-2xl border border-neutral-200 bg-white p-4">
-          <p className="text-sm font-medium text-neutral-700">Briefing compartilhado</p>
-          <p className="text-sm text-neutral-500">
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <p className="text-sm font-medium text-foreground">Briefing compartilhado</p>
+          <p className="text-sm text-muted-foreground">
             Visualização pública em modo leitura.
           </p>
         </div>

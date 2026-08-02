@@ -22,7 +22,7 @@ export default async function LoginPage({
 
   return (
     <div className="mx-auto flex min-h-[65vh] max-w-md items-center">
-      <Card className="w-full rounded-2xl border-neutral-200 bg-white shadow-sm">
+      <Card className="w-full rounded-2xl border-border bg-card shadow-sm">
         <CardHeader>
           <CardTitle className="font-serif text-2xl">Acessar BriefForge</CardTitle>
         </CardHeader>

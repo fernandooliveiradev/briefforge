@@ -50,10 +50,10 @@ export function ProjectFilters() {
   };
 
   return (
-    <form onSubmit={applyFilters} className="rounded-2xl border border-neutral-200 bg-white p-4">
+    <form onSubmit={applyFilters} className="rounded-2xl border border-border bg-card p-4">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-[1.3fr_1fr_1fr_1fr_auto_auto]">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={q}
             onChange={(event) => setQ(event.target.value)}

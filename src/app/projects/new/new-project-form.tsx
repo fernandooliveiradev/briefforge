@@ -89,12 +89,12 @@ export function NewProjectForm({ defaultAiProvider }: { defaultAiProvider: AiPro
         <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight">
           Novo briefing
         </h1>
-        <p className="text-neutral-600 mt-1">
+        <p className="text-muted-foreground mt-1">
           Preencha os parâmetros e o BriefForge vai gerar um briefing completo com identidade, moodboard, prompts e skills por etapa.
         </p>
       </div>
 
-      <Card className="rounded-2xl border border-neutral-200 bg-white shadow-sm">
+      <Card className="rounded-2xl border border-border bg-card shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle className="font-serif text-xl font-semibold">Parâmetros do briefing</CardTitle>
         </CardHeader>
@@ -248,5 +248,5 @@ export function NewProjectForm({ defaultAiProvider }: { defaultAiProvider: AiPro
 }
 
 function FieldHint({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs leading-relaxed text-neutral-500">{children}</p>;
+  return <p className="text-xs leading-relaxed text-muted-foreground">{children}</p>;
 }

@@ -68,7 +68,7 @@ export default function DeleteProjectButton({
           size={variant === "icon" ? "icon" : "sm"}
           className={
             variant === "icon"
-              ? "h-9 w-9 rounded-lg text-[hsl(30,15%,50%)] hover:bg-red-50 hover:text-red-600"
+              ? "h-9 w-9 rounded-lg text-muted-foreground hover:bg-red-50 hover:text-red-600"
               : "rounded-lg border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
           }
           disabled={isDeleting}

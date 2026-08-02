@@ -31,7 +31,7 @@ const CopyButton = ({ text, label }: { text: string; label?: string }) => {
       variant="ghost"
       size="sm"
       onClick={handleCopy}
-      className="h-8 w-8 p-0 rounded-lg text-[hsl(30,15%,50%)] hover:bg-[hsl(38,30%,92%)]"
+      className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:bg-accent"
     >
       {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
     </Button>
@@ -82,54 +82,54 @@ export default function BriefingViewer({
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2">
         <div>
           <h1 className="font-serif text-3xl sm:text-4xl font-bold">{client_name}</h1>
-          <p className="text-[hsl(30,10%,50%)] capitalize">{business_type.replace(/_/g, ' ')}</p>
+          <p className="text-muted-foreground capitalize">{business_type.replace(/_/g, ' ')}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Badge variant="secondary" className="rounded-full bg-[hsl(38,30%,92%)] text-[hsl(30,15%,35%)]">
+          <Badge variant="secondary" className="rounded-full">
             {briefing.brand.tagline}
           </Badge>
-          <Badge variant="secondary" className="rounded-full bg-[hsl(38,30%,92%)] text-[hsl(30,15%,35%)]">
+          <Badge variant="secondary" className="rounded-full">
             {briefing.brand.positioning}
           </Badge>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="inline-flex h-auto p-1 bg-[hsl(38,25%,92%)] rounded-xl gap-1 mb-6">
+        <TabsList className="inline-flex h-auto p-1 bg-muted rounded-xl gap-1 mb-6">
           <TabsTrigger
             value="briefing"
-            className="rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[hsl(30,25%,15%)] text-[hsl(30,10%,50%)]"
+            className="rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground"
           >
             📋 Briefing
           </TabsTrigger>
           <TabsTrigger
             value="marca"
-            className="rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[hsl(30,25%,15%)] text-[hsl(30,10%,50%)]"
+            className="rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground"
           >
             ✨ Marca
           </TabsTrigger>
           <TabsTrigger
             value="moodboard"
-            className="rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[hsl(30,25%,15%)] text-[hsl(30,10%,50%)]"
+            className="rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground"
           >
             🎨 Moodboard
           </TabsTrigger>
           <TabsTrigger
             value="prompts"
-            className="rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[hsl(30,25%,15%)] text-[hsl(30,10%,50%)]"
+            className="rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground"
           >
             💬 Prompts
           </TabsTrigger>
           <TabsTrigger
             value="entregaveis"
-            className="rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[hsl(30,25%,15%)] text-[hsl(30,10%,50%)]"
+            className="rounded-lg px-4 py-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground"
           >
             📦 Entregáveis
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="briefing" className="mt-0">
-          <Card className="rounded-2xl border border-[hsl(38,25%,88%)] bg-white shadow-sm">
+          <Card className="rounded-2xl border-border shadow-sm">
             <CardContent className="p-6 space-y-6">
               <StageAction
                 stage="briefing"
@@ -149,16 +149,16 @@ export default function BriefingViewer({
               <Section title="Público-alvo" icon={<Lightbulb className="h-5 w-5" />}>
                 <InfoRow label="Público principal" value={briefing.audience.primary_audience} />
                 <div>
-                  <h4 className="text-sm font-medium text-[hsl(30,10%,50%)] mb-1">Dores</h4>
-                  <ul className="list-disc list-inside text-sm text-[hsl(30,15%,30%)] space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Dores</h4>
+                  <ul className="list-disc list-inside text-sm text-foreground/70 space-y-1">
                     {briefing.audience.pain_points.map((p, i) => (
                       <li key={i}>{p}</li>
                     ))}
                   </ul>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-[hsl(30,10%,50%)] mb-1">Desejos</h4>
-                  <ul className="list-disc list-inside text-sm text-[hsl(30,15%,30%)] space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Desejos</h4>
+                  <ul className="list-disc list-inside text-sm text-foreground/70 space-y-1">
                     {briefing.audience.desires.map((d, i) => (
                       <li key={i}>{d}</li>
                     ))}
@@ -172,7 +172,7 @@ export default function BriefingViewer({
 
         <TabsContent value="marca" className="mt-0">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="rounded-2xl border border-[hsl(38,25%,88%)] bg-white shadow-sm">
+            <Card className="rounded-2xl border-border shadow-sm">
               <CardContent className="p-6 space-y-4">
                 <StageAction
                   stage="brand"
@@ -183,7 +183,7 @@ export default function BriefingViewer({
                 <Section title="Personalidade e tom" icon={<Sparkles className="h-5 w-5" />}>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {briefing.brand.personality.map((p, i) => (
-                      <Badge key={i} variant="outline" className="rounded-full bg-[hsl(38,30%,92%)] border-none">
+                      <Badge key={i} variant="outline" className="rounded-full bg-muted border-none">
                         {p}
                       </Badge>
                     ))}
@@ -195,14 +195,14 @@ export default function BriefingViewer({
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border border-[hsl(38,25%,88%)] bg-white shadow-sm">
+            <Card className="rounded-2xl border-border shadow-sm">
               <CardContent className="p-6 space-y-4">
                 <Section title="Identidade visual" icon={<PaintBucket className="h-5 w-5" />}>
                   <InfoRow label="Direção do logo" value={briefing.visual_identity.logo_direction} />
                   <LogoConceptBoard concept={briefing.visual_identity.logo_concept_board} />
 
                   <div>
-                    <h4 className="text-sm font-medium text-[hsl(30,10%,50%)] mb-2">Paleta de cores</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Paleta de cores</h4>
                     <div className="space-y-2">
                       {briefing.visual_identity.color_palette.map((color, i) => (
                         <div key={i} className="flex items-center gap-3">
@@ -212,7 +212,7 @@ export default function BriefingViewer({
                           />
                           <div>
                             <p className="text-sm font-medium">{color.name}</p>
-                            <p className="text-xs text-[hsl(30,10%,50%)]">
+                            <p className="text-xs text-muted-foreground">
                               {color.hex} — {color.usage}
                             </p>
                           </div>
@@ -222,28 +222,28 @@ export default function BriefingViewer({
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-medium text-[hsl(30,10%,50%)] mb-2">Tipografia</h4>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Tipografia</h4>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <Type className="h-4 w-4 text-[hsl(30,15%,50%)]" />
+                        <Type className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm font-medium font-serif">
                           {briefing.visual_identity.typography.heading}
                         </span>
-                        <span className="text-xs text-[hsl(30,10%,50%)]">— Títulos</span>
+                        <span className="text-xs text-muted-foreground">— Títulos</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Type className="h-4 w-4 text-[hsl(30,15%,50%)]" />
+                        <Type className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm font-medium font-sans">
                           {briefing.visual_identity.typography.body}
                         </span>
-                        <span className="text-xs text-[hsl(30,10%,50%)]">— Corpo</span>
+                        <span className="text-xs text-muted-foreground">— Corpo</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Type className="h-4 w-4 text-[hsl(30,15%,50%)]" />
+                        <Type className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm font-medium font-sans">
                           {briefing.visual_identity.typography.accent}
                         </span>
-                        <span className="text-xs text-[hsl(30,10%,50%)]">— Apoio</span>
+                        <span className="text-xs text-muted-foreground">— Apoio</span>
                       </div>
                     </div>
                   </div>
@@ -255,7 +255,7 @@ export default function BriefingViewer({
         </TabsContent>
 
         <TabsContent value="moodboard" className="mt-0">
-          <Card className="rounded-2xl border border-[hsl(38,25%,88%)] bg-white shadow-sm">
+          <Card className="rounded-2xl border-border shadow-sm">
             <CardContent className="p-6 space-y-6">
               <StageAction
                 stage="moodboard"
@@ -265,18 +265,18 @@ export default function BriefingViewer({
               />
               <Section title="Moodboard criativo" icon={<Camera className="h-5 w-5" />}>
                 <div>
-                  <h4 className="text-sm font-medium text-[hsl(30,10%,50%)] mb-1">Palavras-chave</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Palavras-chave</h4>
                   <div className="flex flex-wrap gap-2">
                     {briefing.moodboard.keywords.map((kw, i) => (
-                      <Badge key={i} className="rounded-full bg-[hsl(38,30%,93%)] text-[hsl(30,20%,30%)] font-normal">
+                      <Badge key={i} className="rounded-full bg-muted text-foreground font-normal">
                         {kw}
                       </Badge>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-[hsl(30,10%,50%)] mb-1">Referências visuais</h4>
-                  <ul className="list-disc list-inside text-sm text-[hsl(30,15%,30%)] space-y-1">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Referências visuais</h4>
+                  <ul className="list-disc list-inside text-sm text-foreground/70 space-y-1">
                     {briefing.moodboard.visual_references.map((ref, i) => (
                       <li key={i}>{ref}</li>
                     ))}
@@ -285,10 +285,10 @@ export default function BriefingViewer({
                 <InfoRow label="Estilo fotográfico" value={briefing.moodboard.photography_style} />
                 <InfoRow label="Estilo de layout" value={briefing.moodboard.layout_style} />
                 <div>
-                  <h4 className="text-sm font-medium text-[hsl(30,10%,50%)] mb-1">Texturas e materiais</h4>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Texturas e materiais</h4>
                   <div className="flex flex-wrap gap-2">
                     {briefing.moodboard.texture_and_materials.map((tex, i) => (
-                      <Badge key={i} variant="outline" className="rounded-full bg-[hsl(38,30%,93%)] border-none">
+                      <Badge key={i} variant="outline" className="rounded-full bg-muted border-none">
                         {tex}
                       </Badge>
                     ))}
@@ -301,7 +301,7 @@ export default function BriefingViewer({
         </TabsContent>
 
         <TabsContent value="prompts" className="mt-0">
-          <Card className="rounded-2xl border border-[hsl(38,25%,88%)] bg-white shadow-sm">
+          <Card className="rounded-2xl border-border shadow-sm">
             <CardContent className="p-6 space-y-6">
               <StageAction
                 stage="prompts"
@@ -323,10 +323,10 @@ export default function BriefingViewer({
                 ].filter(Boolean).map((item, idx) => (
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-[hsl(30,10%,50%)]">{item!.label}</h4>
+                      <h4 className="text-sm font-medium text-muted-foreground">{item!.label}</h4>
                       <CopyButton text={item!.prompt} label={item!.label} />
                     </div>
-                    <p className="text-sm bg-[hsl(38,30%,94%)] p-3 rounded-xl whitespace-pre-wrap leading-relaxed">
+                    <p className="text-sm bg-muted p-3 rounded-xl whitespace-pre-wrap leading-relaxed">
                       {item!.prompt}
                     </p>
                   </div>
@@ -338,7 +338,7 @@ export default function BriefingViewer({
         </TabsContent>
 
         <TabsContent value="entregaveis" className="mt-0">
-          <Card className="rounded-2xl border border-[hsl(38,25%,88%)] bg-white shadow-sm">
+          <Card className="rounded-2xl border-border shadow-sm">
             <CardContent className="p-6 space-y-6">
               <StageAction
                 stage="deliverables"
@@ -347,7 +347,7 @@ export default function BriefingViewer({
                 onRegenerate={regenerateStage}
               />
               <Section title="Pacote de entregáveis">
-                <p className="text-sm text-[hsl(30,10%,45%)]">
+                <p className="text-sm text-muted-foreground">
                   Lista de materiais que devem sair prontos para execução, exportação ou apresentação em portfólio.
                 </p>
                 <ul className="space-y-2">
@@ -381,8 +381,8 @@ export default function BriefingViewer({
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <h4 className="text-sm font-medium text-[hsl(30,10%,50%)]">{label}</h4>
-      <p className="text-sm text-[hsl(30,15%,30%)] mt-0.5">{value}</p>
+      <h4 className="text-sm font-medium text-muted-foreground">{label}</h4>
+      <p className="text-sm text-foreground/80 mt-0.5">{value}</p>
     </div>
   );
 }
@@ -395,13 +395,13 @@ function LogoConceptBoard({
   if (!concept) return null;
 
   return (
-    <div className="rounded-xl border border-[hsl(38,25%,88%)] bg-[hsl(38,30%,97%)] p-4 space-y-3">
+    <div className="rounded-xl border-border bg-muted/50 p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h4 className="text-sm font-semibold text-[hsl(30,25%,20%)]">
+          <h4 className="text-sm font-semibold text-foreground">
             Concepção da logo: {concept.concept_name}
           </h4>
-          <p className="text-xs text-[hsl(30,10%,50%)] mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Tipo: {concept.logo_type}
           </p>
         </div>
@@ -419,8 +419,8 @@ function LogoConceptBoard({
 function ConceptList({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
-      <h4 className="text-sm font-medium text-[hsl(30,10%,50%)] mb-1">{title}</h4>
-      <ul className="list-disc list-inside text-sm text-[hsl(30,15%,30%)] space-y-1">
+      <h4 className="text-sm font-medium text-muted-foreground mb-1">{title}</h4>
+      <ul className="list-disc list-inside text-sm text-foreground/70 space-y-1">
         {items.map((item, index) => (
           <li key={index}>{item}</li>
         ))}
@@ -433,7 +433,7 @@ function Section({ title, children, icon }: { title: string; children: React.Rea
   return (
     <div>
       <div className="flex items-center gap-2 mb-3">
-        {icon && <span className="text-[hsl(30,20%,45%)]">{icon}</span>}
+        {icon && <span className="text-muted-foreground">{icon}</span>}
         <h3 className="font-serif text-lg font-semibold">{title}</h3>
       </div>
       <div className="space-y-3">{children}</div>
@@ -470,7 +470,7 @@ function StageAction({
         type="button"
         variant="outline"
         size="sm"
-        className="rounded-xl bg-white"
+        className="rounded-xl"
         onClick={() => onRegenerate(stage)}
         disabled={isLoading}
       >
@@ -485,30 +485,30 @@ function SkillBox({ skill }: { skill?: AgentSkill }) {
   if (!skill) return null;
 
   return (
-    <div className="rounded-xl border border-[hsl(38,25%,88%)] bg-[hsl(38,30%,97%)] p-4 space-y-3">
+    <div className="rounded-xl border-border bg-muted/50 p-4 space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h4 className="text-sm font-semibold text-[hsl(30,25%,20%)]">Skill do agente: {skill.name}</h4>
-          <p className="text-sm text-[hsl(30,15%,35%)] mt-1">{skill.description}</p>
-          <p className="text-xs text-[hsl(30,10%,50%)] mt-1">
+          <h4 className="text-sm font-semibold text-foreground">Skill do agente: {skill.name}</h4>
+          <p className="text-sm text-foreground/80 mt-1">{skill.description}</p>
+          <p className="text-xs text-muted-foreground mt-1">
             Instrução reutilizável para outro agente seguir nesta etapa. Copie apenas se for executar fora do BriefForge.
           </p>
-          <p className="text-xs text-[hsl(30,10%,50%)] mt-1">Quando usar: {skill.when_to_use}</p>
+          <p className="text-xs text-muted-foreground mt-1">Quando usar: {skill.when_to_use}</p>
         </div>
         <CopyButton text={skillToText(skill)} label={`Skill ${skill.name}`} />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <h5 className="text-xs font-semibold uppercase tracking-wide text-[hsl(30,10%,45%)] mb-2">Instruções</h5>
-          <ul className="list-disc list-inside text-sm text-[hsl(30,15%,30%)] space-y-1">
+          <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Instruções</h5>
+          <ul className="list-disc list-inside text-sm text-foreground/70 space-y-1">
             {skill.instructions.map((item, index) => (
               <li key={index}>{item}</li>
             ))}
           </ul>
         </div>
         <div>
-          <h5 className="text-xs font-semibold uppercase tracking-wide text-[hsl(30,10%,45%)] mb-2">Checks de qualidade</h5>
-          <ul className="list-disc list-inside text-sm text-[hsl(30,15%,30%)] space-y-1">
+          <h5 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Checks de qualidade</h5>
+          <ul className="list-disc list-inside text-sm text-foreground/70 space-y-1">
             {skill.quality_checks.map((item, index) => (
               <li key={index}>{item}</li>
             ))}

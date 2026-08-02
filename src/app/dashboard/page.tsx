@@ -63,7 +63,7 @@ export default async function DashboardPage({
           <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight">
             Seus briefings
           </h1>
-          <p className="text-neutral-600 mt-1 max-w-xl">
+          <p className="text-muted-foreground mt-1 max-w-xl">
             Gerencie seus clientes fictícios e use os briefings para criar projetos incríveis de portfólio.
           </p>
         </div>
@@ -73,9 +73,9 @@ export default async function DashboardPage({
 
       {rows.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <PenLine className="h-12 w-12 text-neutral-400 mb-4" />
+          <PenLine className="h-12 w-12 text-muted-foreground mb-4" />
           <h2 className="text-2xl font-serif font-semibold mb-2">Nenhum briefing ainda</h2>
-          <p className="text-neutral-600 max-w-md mb-6">
+          <p className="text-muted-foreground max-w-md mb-6">
             Gere seu primeiro cliente fictício e comece a construir seu portfólio.
           </p>
           <AppButton asChild>
@@ -87,32 +87,32 @@ export default async function DashboardPage({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {rows.map((project) => (
-            <Card key={project.id} className="group border border-neutral-200 bg-white hover:shadow-lg hover:border-neutral-300 transition-all rounded-2xl overflow-hidden h-full">
+            <Card key={project.id} className="group border-border bg-card hover:shadow-lg hover:border-border/80 transition-all rounded-2xl overflow-hidden h-full">
               <div className="flex items-start">
                 <Link href={`/projects/${project.id}`} className="block min-w-0 flex-1">
                   <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-5 px-5">
                     <div className="flex items-center gap-2">
-                      <div className="h-10 w-10 rounded-xl bg-neutral-100 flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-xl bg-muted flex items-center justify-center">
                         <BusinessIcon type={project.business_type} />
                       </div>
                       <div>
                         <CardTitle className="font-serif text-lg font-bold leading-tight">
                           {project.client_name}
                         </CardTitle>
-                        <p className="text-xs text-neutral-500 capitalize">
+                        <p className="text-xs text-muted-foreground capitalize">
                           {project.business_type.replace(/_/g, ' ')}
                         </p>
                       </div>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-neutral-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </CardHeader>
                   <CardContent className="px-5 pb-5 pt-1">
                     <div className="flex flex-wrap gap-2">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-700">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
                         <Palette className="h-3 w-3" />
                         {project.visual_style}
                       </span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-700">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
                         <Calendar className="h-3 w-3" />
                         {formatDate(project.created_at)}
                       </span>

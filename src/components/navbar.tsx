@@ -9,11 +9,11 @@ const Navbar = () => {
   const pathname = usePathname();
 
   return (
-    <header className="border-b border-neutral-200 bg-neutral-50 sticky top-0 z-50 print:hidden">
+    <header className="border-b border-border bg-background/80 backdrop-blur sticky top-0 z-50 print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <Hammer className="h-6 w-6 text-neutral-900" />
-          <span className="text-xl font-serif font-bold tracking-tight text-neutral-950">
+          <Hammer className="h-6 w-6 text-foreground" />
+          <span className="text-xl font-serif font-bold tracking-tight text-foreground">
             BriefForge
           </span>
         </Link>
@@ -23,8 +23,8 @@ const Navbar = () => {
             href="/dashboard"
             className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
               pathname === "/dashboard"
-                ? "bg-neutral-200 text-neutral-950"
-                : "text-neutral-700 hover:bg-neutral-100"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             }`}
           >
             <FolderOpen className="h-4 w-4" />

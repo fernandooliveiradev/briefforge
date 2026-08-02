@@ -3,7 +3,7 @@ import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const appButtonClass =
-  "bg-black text-white hover:bg-neutral-800 rounded-xl px-3 py-2 h-auto text-sm font-medium shadow-sm";
+  "bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl px-3 py-2 h-auto text-sm font-medium shadow-sm";
 
 export function AppButton({
   className,
