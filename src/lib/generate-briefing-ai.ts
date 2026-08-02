@@ -575,7 +575,10 @@ function extractJsonObject(content: string): unknown {
   throw new Error('Incomplete JSON object');
 }
 
-function validateStringArray(val: any, path: string): string[] {
+function validateStringArray(val: any, path: string): string[] | undefined {
+  if (val === undefined || val === null) {
+    return undefined;
+  }
   if (!Array.isArray(val) || val.length === 0) {
     throw new Error(`AI response missing or empty array: ${path}`);
   }
@@ -586,7 +589,10 @@ function validateStringArray(val: any, path: string): string[] {
   return filtered;
 }
 
-function validateColorPalette(val: any, path: string): Array<{ name: string; hex: string; usage: string }> {
+function validateColorPalette(val: any, path: string): Array<{ name: string; hex: string; usage: string }> | undefined {
+  if (val === undefined || val === null) {
+    return undefined;
+  }
   if (!Array.isArray(val) || val.length === 0) {
     throw new Error(`AI response missing color palette: ${path}`);
   }
@@ -602,15 +608,18 @@ function validateColorPalette(val: any, path: string): Array<{ name: string; hex
   return valid.slice(0, 10);
 }
 
-function validateLogoConceptBoard(val: any, path: string): NonNullable<BriefingData['visual_identity']['logo_concept_board']> {
+function validateLogoConceptBoard(val: any, path: string): NonNullable<BriefingData['visual_identity']['logo_concept_board']> | undefined {
+  if (val === undefined || val === null) {
+    return undefined;
+  }
   return {
     concept_name: validateString(val?.concept_name, `${path}.concept_name`),
     logo_type: validateString(val?.logo_type, `${path}.logo_type`),
     composition: validateString(val?.composition, `${path}.composition`),
-    symbol_meaning: validateStringArray(val?.symbol_meaning, `${path}.symbol_meaning`),
-    required_variations: validateStringArray(val?.required_variations, `${path}.required_variations`),
-    board_sections: validateStringArray(val?.board_sections, `${path}.board_sections`),
-    production_notes: validateStringArray(val?.production_notes, `${path}.production_notes`),
+    symbol_meaning: validateStringArray(val?.symbol_meaning, `${path}.symbol_meaning`) ?? [],
+    required_variations: validateStringArray(val?.required_variations, `${path}.required_variations`) ?? [],
+    board_sections: validateStringArray(val?.board_sections, `${path}.board_sections`) ?? [],
+    production_notes: validateStringArray(val?.production_notes, `${path}.production_notes`) ?? [],
   };
 }
 
@@ -632,12 +641,15 @@ function normalizeSkillName(val: any, path: string): string {
 }
 
 function validateAgentSkill(val: any, path: string) {
+  if (val === undefined || val === null) {
+    return undefined;
+  }
   return {
     name: normalizeSkillName(val?.name, `${path}.name`),
     description: validateString(val?.description, `${path}.description`),
     when_to_use: validateString(val?.when_to_use, `${path}.when_to_use`),
-    instructions: validateStringArray(val?.instructions, `${path}.instructions`),
-    quality_checks: validateStringArray(val?.quality_checks, `${path}.quality_checks`),
+    instructions: validateStringArray(val?.instructions, `${path}.instructions`) ?? [],
+    quality_checks: validateStringArray(val?.quality_checks, `${path}.quality_checks`) ?? [],
   };
 }
 
@@ -654,8 +666,8 @@ function validateBriefingStage(raw: any) {
     },
     audience: {
       primary_audience: validateString(raw?.audience?.primary_audience, 'audience.primary_audience'),
-      pain_points: validateStringArray(raw?.audience?.pain_points, 'audience.pain_points'),
-      desires: validateStringArray(raw?.audience?.desires, 'audience.desires'),
+      pain_points: validateStringArray(raw?.audience?.pain_points, 'audience.pain_points') ?? [],
+      desires: validateStringArray(raw?.audience?.desires, 'audience.desires') ?? [],
     },
   };
 }
@@ -663,7 +675,7 @@ function validateBriefingStage(raw: any) {
 function validateBrandStage(raw: any) {
   return {
     brand: {
-      personality: validateStringArray(raw?.brand?.personality, 'brand.personality'),
+      personality: validateStringArray(raw?.brand?.personality, 'brand.personality') ?? [],
       tone_of_voice: validateString(raw?.brand?.tone_of_voice, 'brand.tone_of_voice'),
       positioning: validateString(raw?.brand?.positioning, 'brand.positioning'),
       tagline: validateString(raw?.brand?.tagline, 'brand.tagline'),
@@ -673,8 +685,16 @@ function validateBrandStage(raw: any) {
       logo_concept_board: validateLogoConceptBoard(
         raw?.visual_identity?.logo_concept_board,
         'visual_identity.logo_concept_board'
-      ),
-      color_palette: validateColorPalette(raw?.visual_identity?.color_palette, 'visual_identity.color_palette'),
+      ) ?? {
+        concept_name: '',
+        logo_type: '',
+        composition: '',
+        symbol_meaning: [],
+        required_variations: [],
+        board_sections: [],
+        production_notes: [],
+      },
+      color_palette: validateColorPalette(raw?.visual_identity?.color_palette, 'visual_identity.color_palette') ?? [],
       typography: {
         heading: validateString(raw?.visual_identity?.typography?.heading, 'visual_identity.typography.heading'),
         body: validateString(raw?.visual_identity?.typography?.body, 'visual_identity.typography.body'),
@@ -687,19 +707,19 @@ function validateBrandStage(raw: any) {
 function validateMoodboardStage(raw: any) {
   return {
     moodboard: {
-      keywords: validateStringArray(raw?.moodboard?.keywords, 'moodboard.keywords'),
-      visual_references: validateStringArray(raw?.moodboard?.visual_references, 'moodboard.visual_references'),
+      keywords: validateStringArray(raw?.moodboard?.keywords, 'moodboard.keywords') ?? [],
+      visual_references: validateStringArray(raw?.moodboard?.visual_references, 'moodboard.visual_references') ?? [],
       photography_style: validateString(raw?.moodboard?.photography_style, 'moodboard.photography_style'),
       layout_style: validateString(raw?.moodboard?.layout_style, 'moodboard.layout_style'),
-      texture_and_materials: validateStringArray(raw?.moodboard?.texture_and_materials, 'moodboard.texture_and_materials'),
+      texture_and_materials: validateStringArray(raw?.moodboard?.texture_and_materials, 'moodboard.texture_and_materials') ?? [],
     },
   };
 }
 
 function validateDeliverablesStage(raw: any) {
   return {
-    deliverables: validateStringArray(raw?.deliverables, 'deliverables'),
-    portfolio_project_ideas: validateStringArray(raw?.portfolio_project_ideas, 'portfolio_project_ideas'),
+    deliverables: validateStringArray(raw?.deliverables, 'deliverables') ?? [],
+    portfolio_project_ideas: validateStringArray(raw?.portfolio_project_ideas, 'portfolio_project_ideas') ?? [],
   };
 }
 
@@ -1172,50 +1192,59 @@ function buildExistingBriefingInstruction(briefing: BriefingData, language: stri
   return `\nContexto existente do briefing para preservar como fonte da verdade ao regenerar prompts:\n${context}\n`;
 }
 
-function validateBriefing(raw: any, language: string): BriefingData {
+function optionalStringOr(fallback: () => string, val: any, path: string): string {
+  return optionalString(val) ?? fallback();
+}
+
+function validateBriefing(raw: any, language: string, fallback?: BriefingData): BriefingData {
+  const client = fallback?.client;
+  const defaultAgentSkills = fallback?.agent_skills ?? buildDefaultAgentSkills(
+    { client: { name: validateString(client?.name, 'client.name'), segment: '', location: '', short_description: '', brand_story: '', main_problem: '', business_goal: '' } } as BriefingData,
+    language
+  );
   const briefing: BriefingData = {
     client: {
-      name: validateString(raw?.client?.name, 'client.name'),
-      segment: validateString(raw?.client?.segment, 'client.segment'),
-      location: validateString(raw?.client?.location, 'client.location'),
-      short_description: validateString(raw?.client?.short_description, 'client.short_description'),
-      brand_story: validateString(raw?.client?.brand_story, 'client.brand_story'),
-      main_problem: validateString(raw?.client?.main_problem, 'client.main_problem'),
-      business_goal: validateString(raw?.client?.business_goal, 'client.business_goal'),
+      name: optionalStringOr(() => validateString(client?.name, 'client.name'), raw?.client?.name, 'client.name'),
+      segment: optionalStringOr(() => validateString(client?.segment, 'client.segment'), raw?.client?.segment, 'client.segment'),
+      location: optionalStringOr(() => validateString(client?.location, 'client.location'), raw?.client?.location, 'client.location'),
+      short_description: optionalStringOr(() => validateString(client?.short_description, 'client.short_description'), raw?.client?.short_description, 'client.short_description'),
+      brand_story: optionalStringOr(() => validateString(client?.brand_story, 'client.brand_story'), raw?.client?.brand_story, 'client.brand_story'),
+      main_problem: optionalStringOr(() => validateString(client?.main_problem, 'client.main_problem'), raw?.client?.main_problem, 'client.main_problem'),
+      business_goal: optionalStringOr(() => validateString(client?.business_goal, 'client.business_goal'), raw?.client?.business_goal, 'client.business_goal'),
     },
     audience: {
-      primary_audience: validateString(raw?.audience?.primary_audience, 'audience.primary_audience'),
-      pain_points: validateStringArray(raw?.audience?.pain_points, 'audience.pain_points'),
-      desires: validateStringArray(raw?.audience?.desires, 'audience.desires'),
+      primary_audience: optionalStringOr(() => validateString(fallback?.audience.primary_audience, 'audience.primary_audience'), raw?.audience?.primary_audience, 'audience.primary_audience'),
+      pain_points: validateStringArray(raw?.audience?.pain_points, 'audience.pain_points') ?? fallback?.audience.pain_points ?? [],
+      desires: validateStringArray(raw?.audience?.desires, 'audience.desires') ?? fallback?.audience.desires ?? [],
     },
     brand: {
-      personality: validateStringArray(raw?.brand?.personality, 'brand.personality'),
-      tone_of_voice: validateString(raw?.brand?.tone_of_voice, 'brand.tone_of_voice'),
-      positioning: validateString(raw?.brand?.positioning, 'brand.positioning'),
-      tagline: validateString(raw?.brand?.tagline, 'brand.tagline'),
+      personality: validateStringArray(raw?.brand?.personality, 'brand.personality') ?? fallback?.brand.personality ?? [],
+      tone_of_voice: optionalStringOr(() => validateString(fallback?.brand.tone_of_voice, 'brand.tone_of_voice'), raw?.brand?.tone_of_voice, 'brand.tone_of_voice'),
+      positioning: optionalStringOr(() => validateString(fallback?.brand.positioning, 'brand.positioning'), raw?.brand?.positioning, 'brand.positioning'),
+      tagline: optionalStringOr(() => validateString(fallback?.brand.tagline, 'brand.tagline'), raw?.brand?.tagline, 'brand.tagline'),
     },
     visual_identity: {
-      logo_direction: validateString(raw?.visual_identity?.logo_direction, 'visual_identity.logo_direction'),
+      logo_direction: optionalStringOr(() => validateString(fallback?.visual_identity.logo_direction, 'visual_identity.logo_direction'), raw?.visual_identity?.logo_direction, 'visual_identity.logo_direction'),
       logo_concept_board: validateLogoConceptBoard(
         raw?.visual_identity?.logo_concept_board,
         'visual_identity.logo_concept_board'
-      ),
-      color_palette: validateColorPalette(raw?.visual_identity?.color_palette, 'visual_identity.color_palette'),
+      ) ?? fallback?.visual_identity.logo_concept_board,
+      color_palette: validateColorPalette(raw?.visual_identity?.color_palette, 'visual_identity.color_palette') ?? fallback?.visual_identity.color_palette ?? [],
       typography: {
-        heading: validateString(raw?.visual_identity?.typography?.heading, 'visual_identity.typography.heading'),
-        body: validateString(raw?.visual_identity?.typography?.body, 'visual_identity.typography.body'),
-        accent: validateString(raw?.visual_identity?.typography?.accent, 'visual_identity.typography.accent'),
+        heading: optionalStringOr(() => validateString(fallback?.visual_identity.typography.heading, 'visual_identity.typography.heading'), raw?.visual_identity?.typography?.heading, 'visual_identity.typography.heading'),
+        body: optionalStringOr(() => validateString(fallback?.visual_identity.typography.body, 'visual_identity.typography.body'), raw?.visual_identity?.typography?.body, 'visual_identity.typography.body'),
+        accent: optionalStringOr(() => validateString(fallback?.visual_identity.typography.accent, 'visual_identity.typography.accent'), raw?.visual_identity?.typography?.accent, 'visual_identity.typography.accent'),
       },
     },
     moodboard: {
-      keywords: validateStringArray(raw?.moodboard?.keywords, 'moodboard.keywords'),
-      visual_references: validateStringArray(raw?.moodboard?.visual_references, 'moodboard.visual_references'),
-      photography_style: validateString(raw?.moodboard?.photography_style, 'moodboard.photography_style'),
-      layout_style: validateString(raw?.moodboard?.layout_style, 'moodboard.layout_style'),
-      texture_and_materials: validateStringArray(raw?.moodboard?.texture_and_materials, 'moodboard.texture_and_materials'),
+      keywords: validateStringArray(raw?.moodboard?.keywords, 'moodboard.keywords') ?? fallback?.moodboard.keywords ?? [],
+      visual_references: validateStringArray(raw?.moodboard?.visual_references, 'moodboard.visual_references') ?? fallback?.moodboard.visual_references ?? [],
+      photography_style: optionalStringOr(() => validateString(fallback?.moodboard.photography_style, 'moodboard.photography_style'), raw?.moodboard?.photography_style, 'moodboard.photography_style'),
+      layout_style: optionalStringOr(() => validateString(fallback?.moodboard.layout_style, 'moodboard.layout_style'), raw?.moodboard?.layout_style, 'moodboard.layout_style'),
+      texture_and_materials: validateStringArray(raw?.moodboard?.texture_and_materials, 'moodboard.texture_and_materials') ?? fallback?.moodboard.texture_and_materials ?? [],
     },
-    deliverables: validateStringArray(raw?.deliverables, 'deliverables'),
-    portfolio_project_ideas: validateStringArray(raw?.portfolio_project_ideas, 'portfolio_project_ideas'),
+    deliverables: validateStringArray(raw?.deliverables, 'deliverables') ?? fallback?.deliverables ?? [],
+    portfolio_project_ideas: validateStringArray(raw?.portfolio_project_ideas, 'portfolio_project_ideas') ?? fallback?.portfolio_project_ideas ?? [],
     prompts: {
       landing_page_prompt: '',
       logo_prompt: '',
@@ -1226,11 +1255,11 @@ function validateBriefing(raw: any, language: string): BriefingData {
       master_execution_prompt: '',
     },
     agent_skills: {
-      briefing: validateAgentSkill(raw?.agent_skills?.briefing, 'agent_skills.briefing'),
-      brand: validateAgentSkill(raw?.agent_skills?.brand, 'agent_skills.brand'),
-      moodboard: validateAgentSkill(raw?.agent_skills?.moodboard, 'agent_skills.moodboard'),
-      prompts: validateAgentSkill(raw?.agent_skills?.prompts, 'agent_skills.prompts'),
-      deliverables: validateAgentSkill(raw?.agent_skills?.deliverables, 'agent_skills.deliverables'),
+      briefing: validateAgentSkill(raw?.agent_skills?.briefing, 'agent_skills.briefing') ?? fallback?.agent_skills.briefing ?? defaultAgentSkills.briefing,
+      brand: validateAgentSkill(raw?.agent_skills?.brand, 'agent_skills.brand') ?? fallback?.agent_skills.brand ?? defaultAgentSkills.brand,
+      moodboard: validateAgentSkill(raw?.agent_skills?.moodboard, 'agent_skills.moodboard') ?? fallback?.agent_skills.moodboard ?? defaultAgentSkills.moodboard,
+      prompts: validateAgentSkill(raw?.agent_skills?.prompts, 'agent_skills.prompts') ?? fallback?.agent_skills.prompts ?? defaultAgentSkills.prompts,
+      deliverables: validateAgentSkill(raw?.agent_skills?.deliverables, 'agent_skills.deliverables') ?? fallback?.agent_skills.deliverables ?? defaultAgentSkills.deliverables,
     },
   };
 
@@ -1534,7 +1563,11 @@ Compact retry instruction: the previous response was too long or not valid JSON.
 
   for (const [index, attempt] of attempts.entries()) {
     try {
-      const validated = validateBriefing(await requestBriefingJson(config, attempt.message, attempt.maxTokens), language);
+      const validated = validateBriefing(
+        await requestBriefingJson(config, attempt.message, attempt.maxTokens),
+        language,
+        currentBriefing
+      );
       return applyPromptContext(validated, currentBriefing ?? validated, language);
     } catch (error) {
       const canRetry = error instanceof AiGenerationError

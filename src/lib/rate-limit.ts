@@ -55,7 +55,7 @@ export function checkRateLimit(key: string, rule: RateLimitRule): RateLimitResul
   return {
     ok: current.count <= rule.limit,
     limit: rule.limit,
-    remaining: rule.limit - current.count,
+    remaining: Math.max(0, rule.limit - current.count),
     resetAt: current.resetAt,
   };
 }
